@@ -1,11 +1,18 @@
+import { useAuth } from "@/_core/hooks/useAuth";
 import { Button } from "@/components/ui/button";
+import { startLogin } from "@/const";
 import { trpc } from "@/lib/trpc";
 import {
   ArrowRight,
+  Bookmark,
   Check,
+  CheckCircle2,
+  Clock3,
   LayoutDashboard,
   Lightbulb,
   LoaderCircle,
+  LogIn,
+  LogOut,
   Megaphone,
   Rocket,
   Search,
@@ -18,10 +25,29 @@ import React, { FormEvent, useState } from "react";
 export default function Home() {
   const [idea, setIdea] = useState("");
   const [inputError, setInputError] = useState<string | null>(null);
-  const generateBlueprint = trpc.blueprint.generate.useMutation();
-  const blueprint = generateBlueprint.data;
+  const { user, loading: isAuthLoading, isAuthenticated, logout } = useAuth();
+  const savedBlueprints = trpc.blueprint.list.useQuery(undefined, {
+    enabled: isAuthenticated,
+    retry: false,
+    refetchOnWindowFocus: false,
+  });
+  const saveBlueprint = trpc.blueprint.save.useMutation({
+    onSuccess: () => {
+      void savedBlueprints.refetch();
+    },
+  });
+  const generateBlueprint = trpc.blueprint.generate.useMutation({
+    onSuccess: (generatedBlueprint, variables) => {
+      if (isAuthenticated) {
+        saveBlueprint.mutate({ idea: variables.idea, blueprint: generatedBlueprint });
+      }
+    },
+  });
+  const [selectedBlueprint, setSelectedBlueprint] = useState<NonNullable<typeof generateBlueprint.data> | null>(null);
+  const blueprint = selectedBlueprint ?? generateBlueprint.data;
   const isLoading = generateBlueprint.isPending;
-  const errorMessage = inputError ?? generateBlueprint.error?.message;
+  const errorMessage = inputError ?? generateBlueprint.error?.message ?? saveBlueprint.error?.message ?? savedBlueprints.error?.message;
+  const saveStatus = saveBlueprint.isPending ? "Saving" : saveBlueprint.isSuccess ? "Saved" : saveBlueprint.isError ? "Save failed" : null;
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -33,7 +59,15 @@ export default function Home() {
     }
 
     setInputError(null);
+    setSelectedBlueprint(null);
     generateBlueprint.mutate({ idea: trimmedIdea });
+  }
+
+  function openSavedBlueprint(savedBlueprint: NonNullable<typeof savedBlueprints.data>[number]) {
+    generateBlueprint.reset();
+    setIdea(savedBlueprint.idea);
+    setInputError(null);
+    setSelectedBlueprint(savedBlueprint.blueprint);
   }
 
   return (
@@ -44,6 +78,25 @@ export default function Home() {
 
       <div className="relative mx-auto max-w-6xl px-5 pb-16 pt-16 sm:px-8 sm:pt-24 lg:px-10">
         <header className="mx-auto max-w-3xl text-center">
+          <div className="mb-8 flex justify-center sm:absolute sm:right-10 sm:top-8 sm:mb-0">
+            {isAuthLoading ? (
+              <span className="flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-400">
+                <LoaderCircle className="h-4 w-4 animate-spin" aria-hidden="true" />
+              </span>
+            ) : isAuthenticated ? (
+              <div className="flex items-center gap-1.5 rounded-full border border-slate-200 bg-white p-1 shadow-sm">
+                <span className="hidden px-2 text-xs font-semibold text-slate-600 sm:inline">{user?.name ?? "Signed in"}</span>
+                <Button type="button" variant="ghost" size="icon" onClick={() => void logout()} aria-label="Sign out" className="h-8 w-8 rounded-full text-slate-500 hover:bg-slate-100 hover:text-slate-900">
+                  <LogOut className="h-4 w-4" aria-hidden="true" />
+                </Button>
+              </div>
+            ) : (
+              <Button type="button" variant="outline" onClick={startLogin} className="h-9 rounded-full border-slate-200 bg-white px-4 text-xs font-semibold text-slate-700 shadow-sm hover:bg-slate-50">
+                <LogIn className="h-3.5 w-3.5" aria-hidden="true" />
+                Sign in to save
+              </Button>
+            )}
+          </div>
           <div className="inline-flex items-center gap-2 text-[11px] font-bold uppercase tracking-[0.24em] text-slate-500">
             <Rocket className="h-4 w-4 text-blue-600" aria-hidden="true" />
             Autonomous AI Startup Builder
@@ -93,6 +146,41 @@ export default function Home() {
           ) : null}
         </header>
 
+        {isAuthenticated ? (
+          <section aria-label="Saved blueprints" className="mx-auto mt-8 max-w-3xl rounded-3xl border border-slate-200 bg-white/70 p-4 shadow-sm backdrop-blur-sm sm:p-5">
+            <div className="flex items-center gap-3">
+              <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-blue-50 text-blue-600">
+                <Bookmark className="h-4 w-4" aria-hidden="true" />
+              </span>
+              <div>
+                <h2 className="text-sm font-black tracking-[-0.015em] text-black">Saved blueprints</h2>
+                <p className="text-xs font-light text-slate-500">New generations are saved here automatically.</p>
+              </div>
+            </div>
+
+            {savedBlueprints.isLoading ? (
+              <div className="mt-4 flex items-center gap-2 text-xs text-slate-500">
+                <LoaderCircle className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />
+                Loading your saved blueprints...
+              </div>
+            ) : savedBlueprints.data?.length ? (
+              <div className="mt-4 flex gap-2 overflow-x-auto pb-1">
+                {savedBlueprints.data.map(savedBlueprint => (
+                  <button key={savedBlueprint.id} type="button" onClick={() => openSavedBlueprint(savedBlueprint)} className="min-w-52 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-left transition hover:border-blue-200 hover:bg-blue-50/60 focus:outline-none focus:ring-2 focus:ring-blue-200">
+                    <p className="truncate text-sm font-bold text-slate-800">{savedBlueprint.blueprint.startupName}</p>
+                    <div className="mt-1 flex items-center gap-1.5 text-[11px] text-slate-500">
+                      <Clock3 className="h-3 w-3" aria-hidden="true" />
+                      {new Date(savedBlueprint.createdAt).toLocaleDateString()}
+                    </div>
+                  </button>
+                ))}
+              </div>
+            ) : (
+              <p className="mt-4 text-xs text-slate-500">Your saved startup blueprints will appear here.</p>
+            )}
+          </section>
+        ) : null}
+
         {isLoading ? (
           <section className="mx-auto mt-16 flex max-w-md flex-col items-center rounded-3xl border border-slate-200 bg-white/80 px-8 py-14 text-center shadow-sm backdrop-blur-sm">
             <LoaderCircle className="h-7 w-7 animate-spin text-blue-600" aria-hidden="true" />
@@ -110,7 +198,19 @@ export default function Home() {
                   <h2 className="mt-5 text-3xl font-black tracking-[-0.045em] sm:text-5xl">{blueprint.startupName}</h2>
                   <p className="mt-3 max-w-2xl text-base font-light leading-7 text-blue-50 sm:text-lg">{blueprint.tagline}</p>
                 </div>
-                <Rocket className="h-10 w-10 text-blue-100/90" aria-hidden="true" />
+                <div className="flex items-center gap-3">
+                  {isAuthenticated && saveStatus ? (
+                    <span className="inline-flex items-center gap-1.5 rounded-full border border-white/20 bg-white/10 px-3 py-1.5 text-xs font-semibold text-blue-50">
+                      {saveBlueprint.isPending ? <LoaderCircle className="h-3.5 w-3.5 animate-spin" aria-hidden="true" /> : saveBlueprint.isSuccess ? <CheckCircle2 className="h-3.5 w-3.5" aria-hidden="true" /> : <Bookmark className="h-3.5 w-3.5" aria-hidden="true" />}
+                      {saveStatus}
+                    </span>
+                  ) : !isAuthenticated ? (
+                    <button type="button" onClick={startLogin} className="rounded-full border border-white/20 bg-white/10 px-3 py-1.5 text-xs font-semibold text-blue-50 transition hover:bg-white/20">
+                      Sign in to save
+                    </button>
+                  ) : null}
+                  <Rocket className="h-10 w-10 text-blue-100/90" aria-hidden="true" />
+                </div>
               </div>
             </article>
 

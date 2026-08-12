@@ -10,3 +10,10 @@
 - [x] Add tRPC procedure tests for valid structured output and LLM failure handling.
 - [x] Verify the populated blueprint output and exact loading state at responsive breakpoints.
 - [x] Add explicit responsive layout assertions for the populated blueprint and loading views.
+- [x] Add a user-owned saved blueprint database model and migration.
+- [x] Create authenticated tRPC procedures to save and retrieve generated startup blueprints.
+- [x] Add sign-in controls and saved blueprint history to the interactive builder.
+- [x] Test the new database and authentication behavior.
+- [x] Render accurate authenticated save status and errors for generated blueprints.
+- [x] Add UI and procedure coverage for save and saved-history failure states.
+- [x] Add protected procedure coverage for saved-history database failure handling.

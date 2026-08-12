@@ -4,6 +4,9 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import Home from "./Home";
 
 const mutate = vi.fn();
+const saveMutate = vi.fn();
+const resetGenerate = vi.fn();
+const refetchSavedBlueprints = vi.fn();
 const mutationState: {
   data: unknown;
   isPending: boolean;
@@ -14,11 +17,50 @@ const mutationState: {
   error: null,
 };
 
+const savedBlueprintsState: {
+  data: unknown[] | undefined;
+  isLoading: boolean;
+  error: { message: string } | null;
+} = {
+  data: [],
+  isLoading: false,
+  error: null,
+};
+
+const saveBlueprintState: {
+  isPending: boolean;
+  isSuccess: boolean;
+  isError: boolean;
+  error: { message: string } | null;
+} = {
+  isPending: false,
+  isSuccess: false,
+  isError: false,
+  error: null,
+};
+
+const authState = {
+  user: null as { name: string | null } | null,
+  loading: false,
+  isAuthenticated: false,
+  logout: vi.fn(),
+};
+
+vi.mock("@/_core/hooks/useAuth", () => ({
+  useAuth: () => authState,
+}));
+
 vi.mock("@/lib/trpc", () => ({
   trpc: {
     blueprint: {
       generate: {
-        useMutation: () => ({ ...mutationState, mutate }),
+        useMutation: () => ({ ...mutationState, mutate, reset: resetGenerate }),
+      },
+      save: {
+        useMutation: () => ({ ...saveBlueprintState, mutate: saveMutate }),
+      },
+      list: {
+        useQuery: () => ({ ...savedBlueprintsState, refetch: refetchSavedBlueprints }),
       },
     },
   },
@@ -64,9 +106,22 @@ const blueprint = {
 describe("Home", () => {
   beforeEach(() => {
     mutate.mockClear();
+    saveMutate.mockClear();
+    resetGenerate.mockClear();
+    refetchSavedBlueprints.mockClear();
     mutationState.data = undefined;
     mutationState.isPending = false;
     mutationState.error = null;
+    savedBlueprintsState.data = [];
+    savedBlueprintsState.isLoading = false;
+    savedBlueprintsState.error = null;
+    saveBlueprintState.isPending = false;
+    saveBlueprintState.isSuccess = false;
+    saveBlueprintState.isError = false;
+    saveBlueprintState.error = null;
+    authState.user = null;
+    authState.loading = false;
+    authState.isAuthenticated = false;
   });
 
   it("shows the empty prompt before an idea is generated", () => {
@@ -96,6 +151,50 @@ describe("Home", () => {
       "Please describe your startup idea in at least 10 characters.",
     );
     expect(mutate).not.toHaveBeenCalled();
+  });
+
+  it("shows saved blueprints to an authenticated user and opens one on selection", () => {
+    authState.user = { name: "Cherry 99" };
+    authState.isAuthenticated = true;
+    savedBlueprintsState.data = [
+      {
+        id: 8,
+        idea: "A platform that makes recurring clinic compliance easier for lean teams.",
+        blueprint,
+        createdAt: new Date("2026-08-12T00:00:00.000Z"),
+      },
+    ];
+
+    render(<Home />);
+
+    expect(screen.getByText("Saved blueprints")).toBeInTheDocument();
+    expect(screen.getByText("New generations are saved here automatically.")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: /careloop/i }));
+    expect(resetGenerate).toHaveBeenCalledTimes(1);
+    expect(screen.getByText("Business Strategy")).toBeInTheDocument();
+  });
+
+  it("shows an accurate save-failure status and inline error to an authenticated user", () => {
+    authState.user = { name: "Cherry 99" };
+    authState.isAuthenticated = true;
+    mutationState.data = blueprint;
+    saveBlueprintState.isError = true;
+    saveBlueprintState.error = { message: "We could not save this blueprint. Please try again." };
+
+    render(<Home />);
+
+    expect(screen.getByText("Save failed")).toBeInTheDocument();
+    expect(screen.getByRole("alert")).toHaveTextContent("We could not save this blueprint. Please try again.");
+  });
+
+  it("shows an inline alert when saved history cannot be loaded", () => {
+    authState.user = { name: "Cherry 99" };
+    authState.isAuthenticated = true;
+    savedBlueprintsState.error = { message: "We could not load your saved blueprints. Please try again." };
+
+    render(<Home />);
+
+    expect(screen.getByRole("alert")).toHaveTextContent("We could not load your saved blueprints. Please try again.");
   });
 
   it("renders all generated blueprint sections and required landing-page elements", () => {

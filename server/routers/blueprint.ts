@@ -1,8 +1,14 @@
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
+import { createSavedBlueprint, listSavedBlueprints } from "../db";
 import { blueprintRequestSchema, startupBlueprintSchema } from "../blueprintSchema";
 import { invokeLLM } from "../_core/llm";
-import { publicProcedure, router } from "../_core/trpc";
+import { protectedProcedure, publicProcedure, router } from "../_core/trpc";
+
+const saveBlueprintSchema = z.object({
+  idea: blueprintRequestSchema.shape.idea,
+  blueprint: startupBlueprintSchema,
+});
 
 export const blueprintRouter = router({
   generate: publicProcedure.input(blueprintRequestSchema).mutation(async ({ input }) => {
@@ -45,6 +51,43 @@ Return only JSON that conforms exactly to the provided schema. Avoid generic buz
       throw new TRPCError({
         code: "INTERNAL_SERVER_ERROR",
         message: "We could not generate a startup blueprint. Please try again.",
+      });
+    }
+  }),
+  save: protectedProcedure.input(saveBlueprintSchema).mutation(async ({ ctx, input }) => {
+    try {
+      const id = await createSavedBlueprint({
+        userId: ctx.user.id,
+        idea: input.idea,
+        blueprint: JSON.stringify(input.blueprint),
+      });
+
+      return { id };
+    } catch (error) {
+      console.error("Saving startup blueprint failed", error);
+
+      throw new TRPCError({
+        code: "INTERNAL_SERVER_ERROR",
+        message: "We could not save this blueprint. Please try again.",
+      });
+    }
+  }),
+  list: protectedProcedure.query(async ({ ctx }) => {
+    try {
+      const records = await listSavedBlueprints(ctx.user.id);
+
+      return records.map(record => ({
+        id: record.id,
+        idea: record.idea,
+        createdAt: record.createdAt,
+        blueprint: startupBlueprintSchema.parse(JSON.parse(record.blueprint)),
+      }));
+    } catch (error) {
+      console.error("Retrieving saved startup blueprints failed", error);
+
+      throw new TRPCError({
+        code: "INTERNAL_SERVER_ERROR",
+        message: "We could not load your saved blueprints. Please try again.",
       });
     }
   }),

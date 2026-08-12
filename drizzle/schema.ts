@@ -1,4 +1,4 @@
-import { int, mysqlEnum, mysqlTable, text, timestamp, varchar } from "drizzle-orm/mysql-core";
+import { index, int, mysqlEnum, mysqlTable, text, timestamp, varchar } from "drizzle-orm/mysql-core";
 
 /**
  * Core user table backing auth flow.
@@ -25,4 +25,19 @@ export const users = mysqlTable("users", {
 export type User = typeof users.$inferSelect;
 export type InsertUser = typeof users.$inferInsert;
 
-// TODO: Add your tables here
+export const savedBlueprints = mysqlTable(
+  "savedBlueprints",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    userId: int("userId")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    idea: text("idea").notNull(),
+    blueprint: text("blueprint").notNull(),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+  },
+  table => [index("savedBlueprints_user_created_idx").on(table.userId, table.createdAt)],
+);
+
+export type SavedBlueprint = typeof savedBlueprints.$inferSelect;
+export type InsertSavedBlueprint = typeof savedBlueprints.$inferInsert;
