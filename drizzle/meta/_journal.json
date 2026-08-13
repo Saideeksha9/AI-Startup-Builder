@@ -15,6 +15,13 @@
       "when": 1786552067257,
       "tag": "0001_handy_cerise",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "5",
+      "when": 1786592068515,
+      "tag": "0002_keen_lyja",
+      "breakpoints": true
     }
   ]
 }

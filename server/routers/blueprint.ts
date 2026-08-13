@@ -1,17 +1,25 @@
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
-import { createSavedBlueprint, listSavedBlueprints } from "../db";
+import { createInterestPendingReview, createSavedBlueprint, getInterestTopic, listSavedBlueprints } from "../db";
 import { blueprintRequestSchema, startupBlueprintSchema } from "../blueprintSchema";
 import { invokeLLM } from "../_core/llm";
 import { protectedProcedure, publicProcedure, router } from "../_core/trpc";
 
+const generationSchema = blueprintRequestSchema.extend({
+  interestField: z.string().trim().min(1).max(120).nullable().optional(),
+  interestTopic: z.string().trim().min(1).max(120).nullable().optional(),
+  interestOtherText: z.string().trim().min(2).max(240).nullable().optional(),
+});
+
 const saveBlueprintSchema = z.object({
   idea: blueprintRequestSchema.shape.idea,
   blueprint: startupBlueprintSchema,
+  interestTopicId: z.number().int().positive().nullable().optional(),
+  interestOtherText: z.string().trim().min(2).max(240).nullable().optional(),
 });
 
 export const blueprintRouter = router({
-  generate: publicProcedure.input(blueprintRequestSchema).mutation(async ({ input }) => {
+  generate: publicProcedure.input(generationSchema).mutation(async ({ input }) => {
     try {
       const response = await invokeLLM({
         messages: [
@@ -25,7 +33,7 @@ Return only JSON that conforms exactly to the provided schema. Avoid generic buz
           },
           {
             role: "user",
-            content: `Create a startup blueprint for this idea:\n\n<startup_idea>\n${input.idea}\n</startup_idea>`,
+            content: `Create a startup blueprint for this idea:\n\n<startup_idea>\n${input.idea}\n</startup_idea>\n\n<interest_context>\nField: ${input.interestField ?? "Not specified"}\nTopic: ${input.interestTopic ?? "Not specified"}\nOther domain detail: ${input.interestOtherText ?? "None"}\n</interest_context>\n\nUse the interest context only to make the audience, competitors, regulatory considerations, and go-to-market plan appropriately domain-aware.`,
           },
         ],
         response_format: {
@@ -56,11 +64,22 @@ Return only JSON that conforms exactly to the provided schema. Avoid generic buz
   }),
   save: protectedProcedure.input(saveBlueprintSchema).mutation(async ({ ctx, input }) => {
     try {
+      if (input.interestTopicId) {
+        const topic = await getInterestTopic(input.interestTopicId);
+        if (!topic) throw new TRPCError({ code: "BAD_REQUEST", message: "The selected interest topic is no longer available." });
+      }
+
       const id = await createSavedBlueprint({
         userId: ctx.user.id,
         idea: input.idea,
         blueprint: JSON.stringify(input.blueprint),
+        interestTopicId: input.interestTopicId,
+        interestOtherText: input.interestOtherText,
       });
+
+      if (input.interestOtherText) {
+        await createInterestPendingReview({ userId: ctx.user.id, savedBlueprintId: id, submittedText: input.interestOtherText });
+      }
 
       return { id };
     } catch (error) {

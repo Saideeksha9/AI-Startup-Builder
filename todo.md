@@ -17,3 +17,17 @@
 - [x] Render accurate authenticated save status and errors for generated blueprints.
 - [x] Add UI and procedure coverage for save and saved-history failure states.
 - [x] Add protected procedure coverage for saved-history database failure handling.
+- [x] Add private user-scoped venture, taxonomy, and advisory record database tables with migrations.
+- [x] Implement database-backed field/topic selection with an Other pending-review fallback.
+- [x] Extend startup generation and persistence to attach the selected interest topic to every saved venture.
+- [x] Add protected CRUD procedures for roadmaps, investment scenarios, risks, crisis plans, and chat history.
+- [x] Implement the shared context-aware chatbot with active-startup switching and durable record actions.
+- [x] Build the venture workspace views for roadmap, investment, risk, crisis, and chat interactions.
+- [x] Test user ownership boundaries, taxonomy filtering, durable record actions, and chatbot history behavior.
+- [x] Complete protected update and delete procedures for all venture advisory records.
+- [x] Enable chatbot-confirmed updates to existing milestone, risk, investment, and crisis records.
+- [x] Upgrade workspace sections into a roadmap timeline, risk table, scenario comparison, and crisis-plan list.
+- [x] Add comprehensive ownership, durable-update, and persisted chat-history continuity tests.
+- [x] Enforce server-side confirmation before chatbot updates any existing advisory record.
+- [x] Test confirmed chatbot updates and ownership checks across milestone, investment, risk, and crisis records.
+- [x] Add direct unauthorized-access tests for milestone, investment scenario, and crisis plan mutations.
