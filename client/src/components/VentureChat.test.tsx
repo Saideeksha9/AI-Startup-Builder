@@ -15,7 +15,13 @@ vi.mock("@/lib/trpc", () => ({
   trpc: {
     chat: {
       history: { useQuery: () => ({ ...chatState.history, refetch: refetchHistory }) },
-      send: { useMutation: () => ({ ...chatState.send, mutate: sendMutate }) },
+      send: { useMutation: (options?: { onError?: (error: { message: string }, variables: { activeStartupId: number | null; message: string }) => void }) => ({
+        ...chatState.send,
+        mutate: (variables: { activeStartupId: number | null; message: string }) => {
+          sendMutate(variables);
+          if (chatState.send.error) options?.onError?.(chatState.send.error, variables);
+        },
+      }) },
       clear: { useMutation: () => ({ isPending: false, mutate: clearMutate }) },
     },
   },
@@ -41,11 +47,32 @@ describe("VentureChat", () => {
     expect(screen.getByText("Hi there, need help? Ask me anything about your startup portfolio.")).toBeInTheDocument();
   });
 
-  it("loads quick actions and prepares a selected advisor request", () => {
+  it("loads starter questions and prepares a selected advisor request", () => {
     render(<VentureChat startups={[{ id: 4, blueprint: { startupName: "CareLoop" } }]} activeStartupId={4} onWorkspaceChange={vi.fn()} />);
 
     fireEvent.click(screen.getByRole("button", { name: "Open Venture Advisor" }));
-    fireEvent.click(screen.getByRole("button", { name: "Add a risk" }));
-    expect(screen.getByDisplayValue("Add a risk")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "What risks should I consider?" }));
+    expect(screen.getByDisplayValue("What risks should I consider?")).toBeInTheDocument();
+  });
+
+  it("shows a compact working indicator while the advisor is generating", () => {
+    chatState.send.isPending = true;
+    render(<VentureChat startups={[]} activeStartupId={null} onWorkspaceChange={vi.fn()} />);
+
+    fireEvent.click(screen.getByRole("button", { name: "Open Venture Advisor" }));
+    expect(screen.getByText("Working...")).toBeInTheDocument();
+  });
+
+  it("shows a retry action that resubmits the failed advisor request", () => {
+    chatState.send.error = { message: "The venture advisor could not respond. Please try again." };
+    render(<VentureChat startups={[]} activeStartupId={null} onWorkspaceChange={vi.fn()} />);
+
+    fireEvent.click(screen.getByRole("button", { name: "Open Venture Advisor" }));
+    fireEvent.change(screen.getByLabelText("Message Venture Advisor"), { target: { value: "Help me prioritise." } });
+    fireEvent.click(screen.getByRole("button", { name: "Send message" }));
+    expect(screen.getByRole("button", { name: "Retry" })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Retry" }));
+    expect(sendMutate).toHaveBeenCalledTimes(2);
+    expect(sendMutate).toHaveBeenLastCalledWith({ activeStartupId: null, message: "Help me prioritise." });
   });
 });

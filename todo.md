@@ -38,3 +38,7 @@
 - [x] Diagnose and repair the remaining floating venture advisor failure.
 - [x] Update the floating advisor welcome message to "Hi there, need help?".
 - [x] Add a regression test for the repaired floating chat response path.
+- [x] Add suggested starter questions beneath the floating advisor greeting.
+- [x] Show a concise working status while the advisor is generating a reply.
+- [x] Add a visible retry action that resubmits the most recent failed advisor message.
+- [x] Test guided prompts, working status, and retry behavior.

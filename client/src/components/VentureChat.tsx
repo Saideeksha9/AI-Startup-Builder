@@ -1,6 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { trpc } from "@/lib/trpc";
-import { Bot, ChevronDown, Eraser, MessageCircle, Send, Sparkles, X } from "lucide-react";
+import { Bot, ChevronDown, Eraser, LoaderCircle, MessageCircle, RotateCcw, Send, Sparkles, X } from "lucide-react";
 import React, { FormEvent, useEffect, useState } from "react";
 
 type StartupOption = {
@@ -14,12 +14,18 @@ type VentureChatProps = {
   onWorkspaceChange: () => void;
 };
 
-const quickActions = ["Update roadmap", "Add a risk", "Model a funding scenario", "Ask about GTM"];
+const starterQuestions = [
+  "What startup ideas fit my interests?",
+  "What should I validate first?",
+  "Help me build a 30-day roadmap",
+  "What risks should I consider?",
+];
 
 export function VentureChat({ startups, activeStartupId, onWorkspaceChange }: VentureChatProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [selectedStartupId, setSelectedStartupId] = useState<number | null>(activeStartupId);
   const [message, setMessage] = useState("");
+  const [failedRequest, setFailedRequest] = useState<{ activeStartupId: number | null; message: string } | null>(null);
   const history = trpc.chat.history.useQuery(
     { activeStartupId: selectedStartupId },
     { enabled: isOpen, refetchOnWindowFocus: false },
@@ -27,9 +33,11 @@ export function VentureChat({ startups, activeStartupId, onWorkspaceChange }: Ve
   const sendMessage = trpc.chat.send.useMutation({
     onSuccess: () => {
       setMessage("");
+      setFailedRequest(null);
       void history.refetch();
       onWorkspaceChange();
     },
+    onError: (_error, variables) => setFailedRequest(variables),
   });
   const clearHistory = trpc.chat.clear.useMutation({
     onSuccess: () => void history.refetch(),
@@ -48,6 +56,7 @@ export function VentureChat({ startups, activeStartupId, onWorkspaceChange }: Ve
     event.preventDefault();
     const trimmedMessage = message.trim();
     if (!trimmedMessage || sendMessage.isPending) return;
+    setFailedRequest(null);
     sendMessage.mutate({ activeStartupId: selectedStartupId, message: trimmedMessage });
   }
 
@@ -88,7 +97,7 @@ export function VentureChat({ startups, activeStartupId, onWorkspaceChange }: Ve
             </div>
             {!history.data?.length ? (
               <div className="flex flex-wrap gap-2">
-                {quickActions.map(action => <button key={action} type="button" onClick={() => setMessage(action)} className="rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-600 transition hover:border-blue-200 hover:bg-blue-50 hover:text-blue-700">{action}</button>)}
+                {starterQuestions.map(question => <button key={question} type="button" onClick={() => setMessage(question)} className="rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-600 transition hover:border-blue-200 hover:bg-blue-50 hover:text-blue-700">{question}</button>)}
               </div>
             ) : null}
             {history.data?.map(chatMessage => (
@@ -96,8 +105,9 @@ export function VentureChat({ startups, activeStartupId, onWorkspaceChange }: Ve
                 {chatMessage.content}
               </div>
             ))}
-            {sendMessage.isPending ? <div className="mr-8 rounded-2xl border border-slate-200 bg-white px-3.5 py-3 text-xs font-medium text-slate-500">Thinking with your venture context...</div> : null}
-            {history.error || sendMessage.error ? <p role="alert" className="rounded-xl bg-rose-50 px-3 py-2 text-xs font-medium text-rose-700">{history.error?.message ?? sendMessage.error?.message}</p> : null}
+            {sendMessage.isPending ? <div className="mr-8 flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-3.5 py-3 text-xs font-medium text-slate-500"><LoaderCircle className="h-3.5 w-3.5 animate-spin text-blue-600" aria-hidden="true" />Working...</div> : null}
+            {history.error ? <p role="alert" className="rounded-xl bg-rose-50 px-3 py-2 text-xs font-medium text-rose-700">{history.error.message}</p> : null}
+            {sendMessage.error ? <div role="alert" className="flex items-center justify-between gap-3 rounded-xl bg-rose-50 px-3 py-2 text-xs font-medium text-rose-700"><span>{sendMessage.error.message}</span>{failedRequest ? <Button type="button" variant="outline" size="sm" disabled={sendMessage.isPending} onClick={() => { setFailedRequest(null); sendMessage.mutate(failedRequest); }} className="h-7 shrink-0 rounded-lg border-rose-200 bg-white px-2 text-[11px] font-bold text-rose-700 hover:bg-rose-100"><RotateCcw className="h-3 w-3" aria-hidden="true" />Retry</Button> : null}</div> : null}
           </div>
 
           <form onSubmit={submit} className="border-t border-slate-100 bg-white p-3">
