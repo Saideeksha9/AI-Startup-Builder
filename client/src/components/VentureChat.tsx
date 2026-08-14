@@ -41,8 +41,8 @@ export function VentureChat({ startups, activeStartupId, onWorkspaceChange }: Ve
 
   const activeStartup = startups.find(startup => startup.id === selectedStartupId);
   const greeting = activeStartup
-    ? `Hi there 👋 Want to talk about ${activeStartup.blueprint.startupName}?`
-    : "Hi there 👋 Want to talk about your startup portfolio?";
+    ? `Hi there, need help? I can work with ${activeStartup.blueprint.startupName}.`
+    : "Hi there, need help? Ask me anything about your startup portfolio.";
 
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();

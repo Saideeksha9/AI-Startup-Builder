@@ -211,6 +211,19 @@ describe("venture workspace and chat procedures", () => {
     });
   });
 
+  it("treats unrecognised model action labels as advisory text instead of failing the chat", async () => {
+    vi.mocked(getOrCreateConversation).mockResolvedValue({ id: 7, userId: 42, activeStartupId: 12, createdAt: new Date() } as never);
+    vi.mocked(listConversationMessages).mockResolvedValue([] as never);
+    vi.mocked(invokeLLM).mockResolvedValue({
+      choices: [{ message: { content: JSON.stringify({ reply: "Here are three startup ideas to explore.", persist: true, action: { kind: "startup_idea", operation: "suggest", status: "draft" } }) } }],
+    } as never);
+
+    await expect(caller(chatRouter).send({ activeStartupId: 12, message: "Suggest startup ideas." })).resolves.toMatchObject({
+      reply: "Here are three startup ideas to explore.",
+      linkedRecordType: null,
+    });
+  });
+
   it("converts a provider response without choices into a safe advisor error", async () => {
     vi.mocked(getOrCreateConversation).mockResolvedValue({ id: 7, userId: 42, activeStartupId: 12, createdAt: new Date() } as never);
     vi.mocked(listConversationMessages).mockResolvedValue([] as never);

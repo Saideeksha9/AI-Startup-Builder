@@ -36,9 +36,9 @@ describe("VentureChat", () => {
     render(<VentureChat startups={[{ id: 4, blueprint: { startupName: "CareLoop" } }]} activeStartupId={4} onWorkspaceChange={vi.fn()} />);
 
     fireEvent.click(screen.getByRole("button", { name: "Open Venture Advisor" }));
-    expect(screen.getByText("Hi there 👋 Want to talk about CareLoop?")).toBeInTheDocument();
+    expect(screen.getByText("Hi there, need help? I can work with CareLoop.")).toBeInTheDocument();
     fireEvent.change(screen.getByLabelText("Chat startup context"), { target: { value: "general" } });
-    expect(screen.getByText("Hi there 👋 Want to talk about your startup portfolio?")).toBeInTheDocument();
+    expect(screen.getByText("Hi there, need help? Ask me anything about your startup portfolio.")).toBeInTheDocument();
   });
 
   it("loads quick actions and prepares a selected advisor request", () => {

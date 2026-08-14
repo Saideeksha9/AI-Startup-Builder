@@ -52,9 +52,66 @@ const chatInputSchema = z.object({
 
 const explicitConfirmation = /\b(confirm|confirmed|approve|approved|go ahead|apply (?:it|the update)|save (?:it|the update))\b/i;
 
+const rawAdvisorResponseSchema = z.object({
+  reply: z.string().min(1).max(2400),
+  persist: z.boolean().optional().default(false),
+  action: z.record(z.string(), z.unknown()).optional().default({}),
+}).passthrough();
+
+const actionKinds = ["none", "milestone", "risk", "investment_scenario", "crisis_plan"] as const;
+const actionOperations = ["none", "create", "update"] as const;
+const milestoneStatuses = ["planned", "in_progress", "done", "blocked"] as const;
+const riskSeverities = ["low", "medium", "high", "critical"] as const;
+const riskLikelihoods = ["low", "medium", "high"] as const;
+
+function oneOf<T extends readonly string[]>(value: unknown, values: T, fallback: T[number]) {
+  return typeof value === "string" && (values as readonly string[]).includes(value) ? value as T[number] : fallback;
+}
+
+function optionalOneOf<T extends readonly string[]>(value: unknown, values: T): T[number] | null {
+  return typeof value === "string" && (values as readonly string[]).includes(value) ? value as T[number] : null;
+}
+
+function textOrNull(value: unknown) {
+  return typeof value === "string" ? value : null;
+}
+
+function integerOrNull(value: unknown) {
+  return typeof value === "number" && Number.isInteger(value) ? value : null;
+}
+
 function parseAdvisorResponse(content: string) {
   const fenced = content.match(/^```(?:json)?\s*([\s\S]*?)\s*```$/i);
-  return chatResponseSchema.parse(JSON.parse(fenced?.[1] ?? content.trim()));
+  const raw = rawAdvisorResponseSchema.parse(JSON.parse(fenced?.[1] ?? content.trim()));
+  const action = raw.action;
+  const normalizedKind = oneOf(textOrNull(action.kind)?.trim().toLowerCase().replace(/[\s-]+/g, "_") ?? null, actionKinds, "none");
+  const normalizedOperation = normalizedKind === "none"
+    ? "none"
+    : oneOf(textOrNull(action.operation)?.trim().toLowerCase() ?? null, actionOperations, "none");
+
+  return chatResponseSchema.parse({
+    reply: raw.reply,
+    persist: normalizedOperation === "none" ? false : raw.persist,
+    action: {
+      kind: normalizedKind,
+      operation: normalizedOperation,
+      recordId: integerOrNull(action.recordId),
+      title: textOrNull(action.title),
+      targetDate: textOrNull(action.targetDate),
+      status: optionalOneOf(action.status, milestoneStatuses),
+      severity: optionalOneOf(action.severity, riskSeverities),
+      likelihood: optionalOneOf(action.likelihood, riskLikelihoods),
+      mitigationNotes: textOrNull(action.mitigationNotes),
+      fundingAmount: textOrNull(action.fundingAmount),
+      valuation: textOrNull(action.valuation),
+      runwayMonths: integerOrNull(action.runwayMonths),
+      useOfFunds: textOrNull(action.useOfFunds),
+      triggerConditions: textOrNull(action.triggerConditions),
+      responseSteps: textOrNull(action.responseSteps),
+      owner: textOrNull(action.owner),
+      riskId: integerOrNull(action.riskId),
+    },
+  });
 }
 
 async function contextFor(userId: number, activeStartupId: number | null) {

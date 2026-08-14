@@ -35,3 +35,6 @@
 - [x] Diagnose and repair dependent interest-topic loading and selection.
 - [x] Add regression tests for advisor responses and field-to-topic selection.
 - [x] Add advisor regression tests for plain JSON text completions and missing provider choices.
+- [x] Diagnose and repair the remaining floating venture advisor failure.
+- [x] Update the floating advisor welcome message to "Hi there, need help?".
+- [x] Add a regression test for the repaired floating chat response path.
