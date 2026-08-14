@@ -82,7 +82,7 @@ export default function Home() {
   const topicQueryInput = useMemo(() => ({ fieldId: Number(fieldId) }), [fieldId]);
   const topics = trpc.taxonomy.topics.useQuery(topicQueryInput, { enabled: Boolean(fieldId), staleTime: 60_000, retry: 1 });
   const savedStartups = trpc.blueprint.list.useQuery(undefined, { enabled: isAuthenticated, retry: false, refetchOnWindowFocus: false });
-  const workspace = trpc.workspace.get.useQuery({ savedBlueprintId: activeStartupId ?? 0 }, { enabled: Boolean(activeStartupId), refetchOnWindowFocus: false });
+  const workspace = trpc.workspace.get.useQuery({ savedBlueprintId: activeStartupId }, { enabled: Boolean(activeStartupId), refetchOnWindowFocus: false });
 
   const saveBlueprint = trpc.blueprint.save.useMutation({
     onSuccess: result => {

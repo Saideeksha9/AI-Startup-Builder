@@ -6,6 +6,7 @@ import { VentureChat } from "./VentureChat";
 const sendMutate = vi.fn();
 const clearMutate = vi.fn();
 const refetchHistory = vi.fn();
+const writeClipboard = vi.fn();
 const chatState = {
   history: { data: [] as Array<{ id: number; role: "user" | "assistant"; content: string }>, error: null as { message: string } | null },
   send: { isPending: false, error: null as { message: string } | null },
@@ -32,6 +33,9 @@ describe("VentureChat", () => {
     sendMutate.mockClear();
     clearMutate.mockClear();
     refetchHistory.mockClear();
+    writeClipboard.mockClear();
+    Object.assign(navigator, { clipboard: { writeText: writeClipboard } });
+    window.localStorage.clear();
     chatState.history.data = [];
     chatState.history.error = null;
     chatState.send.isPending = false;
@@ -61,6 +65,26 @@ describe("VentureChat", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Open Venture Advisor" }));
     expect(screen.getByText("Working...")).toBeInTheDocument();
+  });
+
+  it("pins a starter question for priority reuse", () => {
+    render(<VentureChat startups={[]} activeStartupId={null} onWorkspaceChange={vi.fn()} />);
+
+    fireEvent.click(screen.getByRole("button", { name: "Open Venture Advisor" }));
+    fireEvent.click(screen.getByRole("button", { name: "Pin What risks should I consider?" }));
+
+    expect(screen.getByRole("button", { name: "Unpin What risks should I consider?" })).toBeInTheDocument();
+    expect(window.localStorage.getItem("venture-advisor-pinned-prompts")).toContain("What risks should I consider?");
+  });
+
+  it("copies an advisor response with one click", async () => {
+    chatState.history.data = [{ id: 9, role: "assistant", content: "Start with ten customer interviews." }];
+    render(<VentureChat startups={[]} activeStartupId={null} onWorkspaceChange={vi.fn()} />);
+
+    fireEvent.click(screen.getByRole("button", { name: "Open Venture Advisor" }));
+    fireEvent.click(screen.getByRole("button", { name: "Copy advisor response" }));
+
+    expect(writeClipboard).toHaveBeenCalledWith("Start with ten customer interviews.");
   });
 
   it("shows a retry action that resubmits the failed advisor request", () => {

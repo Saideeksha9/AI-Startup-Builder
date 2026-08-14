@@ -119,6 +119,11 @@ describe("venture workspace and chat procedures", () => {
     expect(result.startup.blueprint.startupName).toBe("CareLoop");
   });
 
+  it("returns an empty workspace state without validating an inactive startup as id zero", async () => {
+    await expect(caller(workspaceRouter).get({ savedBlueprintId: null })).resolves.toBeNull();
+    expect(getVentureWorkspace).not.toHaveBeenCalled();
+  });
+
   it("creates a risk record under the authenticated user and active startup", async () => {
     vi.mocked(createRisk).mockResolvedValue(71);
 

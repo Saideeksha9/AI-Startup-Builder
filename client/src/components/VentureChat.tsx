@@ -1,6 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { trpc } from "@/lib/trpc";
-import { Bot, ChevronDown, Eraser, LoaderCircle, MessageCircle, RotateCcw, Send, Sparkles, X } from "lucide-react";
+import { Bot, Check, ChevronDown, Copy, Eraser, LoaderCircle, MessageCircle, Pin, RotateCcw, Send, Sparkles, X } from "lucide-react";
 import React, { FormEvent, useEffect, useState } from "react";
 
 type StartupOption = {
@@ -20,12 +20,15 @@ const starterQuestions = [
   "Help me build a 30-day roadmap",
   "What risks should I consider?",
 ];
+const pinnedPromptsStorageKey = "venture-advisor-pinned-prompts";
 
 export function VentureChat({ startups, activeStartupId, onWorkspaceChange }: VentureChatProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [selectedStartupId, setSelectedStartupId] = useState<number | null>(activeStartupId);
   const [message, setMessage] = useState("");
   const [failedRequest, setFailedRequest] = useState<{ activeStartupId: number | null; message: string } | null>(null);
+  const [pinnedPrompts, setPinnedPrompts] = useState<string[]>([]);
+  const [copiedResponseId, setCopiedResponseId] = useState<number | null>(null);
   const history = trpc.chat.history.useQuery(
     { activeStartupId: selectedStartupId },
     { enabled: isOpen, refetchOnWindowFocus: false },
@@ -47,10 +50,40 @@ export function VentureChat({ startups, activeStartupId, onWorkspaceChange }: Ve
     setSelectedStartupId(activeStartupId);
   }, [activeStartupId]);
 
+  useEffect(() => {
+    try {
+      const saved = window.localStorage.getItem(pinnedPromptsStorageKey);
+      if (!saved) return;
+      const parsed = JSON.parse(saved);
+      if (Array.isArray(parsed)) setPinnedPrompts(parsed.filter((item): item is string => typeof item === "string" && starterQuestions.includes(item)));
+    } catch {
+      setPinnedPrompts([]);
+    }
+  }, []);
+
   const activeStartup = startups.find(startup => startup.id === selectedStartupId);
   const greeting = activeStartup
     ? `Hi there, need help? I can work with ${activeStartup.blueprint.startupName}.`
     : "Hi there, need help? Ask me anything about your startup portfolio.";
+  const orderedStarterQuestions = [...pinnedPrompts, ...starterQuestions.filter(question => !pinnedPrompts.includes(question))];
+
+  function togglePinnedPrompt(question: string) {
+    setPinnedPrompts(current => {
+      const next = current.includes(question) ? current.filter(item => item !== question) : [...current, question];
+      try { window.localStorage.setItem(pinnedPromptsStorageKey, JSON.stringify(next)); } catch { /* Browsing can continue without persistence. */ }
+      return next;
+    });
+  }
+
+  async function copyAssistantResponse(id: number, content: string) {
+    try {
+      await navigator.clipboard.writeText(content);
+      setCopiedResponseId(id);
+      window.setTimeout(() => setCopiedResponseId(current => current === id ? null : current), 1800);
+    } catch {
+      setCopiedResponseId(null);
+    }
+  }
 
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -96,13 +129,16 @@ export function VentureChat({ startups, activeStartupId, onWorkspaceChange }: Ve
               {greeting}
             </div>
             {!history.data?.length ? (
-              <div className="flex flex-wrap gap-2">
-                {starterQuestions.map(question => <button key={question} type="button" onClick={() => setMessage(question)} className="rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-600 transition hover:border-blue-200 hover:bg-blue-50 hover:text-blue-700">{question}</button>)}
+              <div>
+                <p className="mb-2 text-[11px] font-bold uppercase tracking-[0.13em] text-slate-400">Suggested questions</p>
+                <div className="flex flex-wrap gap-2">
+                  {orderedStarterQuestions.map(question => { const isPinned = pinnedPrompts.includes(question); return <span key={question} className="inline-flex overflow-hidden rounded-full border border-slate-200 bg-white"><button type="button" onClick={() => setMessage(question)} className="px-3 py-1.5 text-xs font-semibold text-slate-600 transition hover:bg-blue-50 hover:text-blue-700">{question}</button><button type="button" aria-label={`${isPinned ? "Unpin" : "Pin"} ${question}`} onClick={() => togglePinnedPrompt(question)} className={isPinned ? "border-l border-blue-100 bg-blue-50 px-2 text-blue-700" : "border-l border-slate-100 px-2 text-slate-400 hover:bg-slate-50 hover:text-blue-600"}><Pin className={`h-3 w-3 ${isPinned ? "fill-current" : ""}`} aria-hidden="true" /></button></span>; })}
+                </div>
               </div>
             ) : null}
             {history.data?.map(chatMessage => (
-              <div key={chatMessage.id} className={chatMessage.role === "user" ? "ml-8 rounded-2xl bg-slate-950 px-3.5 py-3 text-sm leading-6 text-white" : "mr-8 rounded-2xl border border-slate-200 bg-white px-3.5 py-3 text-sm leading-6 text-slate-700"}>
-                {chatMessage.content}
+              <div key={chatMessage.id} className={chatMessage.role === "user" ? "ml-8 rounded-2xl bg-slate-950 px-3.5 py-3 text-sm leading-6 text-white" : "group mr-8 rounded-2xl border border-slate-200 bg-white px-3.5 py-3 text-sm leading-6 text-slate-700"}>
+                <div className="flex items-start justify-between gap-2"><span className="whitespace-pre-wrap">{chatMessage.content}</span>{chatMessage.role === "assistant" ? <Button type="button" variant="ghost" size="icon" onClick={() => void copyAssistantResponse(chatMessage.id, chatMessage.content)} aria-label="Copy advisor response" className="h-7 w-7 shrink-0 text-slate-400 hover:bg-blue-50 hover:text-blue-700">{copiedResponseId === chatMessage.id ? <Check className="h-3.5 w-3.5" aria-hidden="true" /> : <Copy className="h-3.5 w-3.5" aria-hidden="true" />}</Button> : null}</div>
               </div>
             ))}
             {sendMessage.isPending ? <div className="mr-8 flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-3.5 py-3 text-xs font-medium text-slate-500"><LoaderCircle className="h-3.5 w-3.5 animate-spin text-blue-600" aria-hidden="true" />Working...</div> : null}

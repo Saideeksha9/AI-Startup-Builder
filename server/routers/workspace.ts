@@ -30,8 +30,9 @@ async function workspaceOrThrow(userId: number, savedBlueprintId: number) {
 }
 
 export const workspaceRouter = router({
-  get: protectedProcedure.input(ventureIdSchema).query(async ({ ctx, input }) => {
+  get: protectedProcedure.input(z.object({ savedBlueprintId: z.number().int().positive().nullable() })).query(async ({ ctx, input }) => {
     try {
+      if (input.savedBlueprintId === null) return null;
       const workspace = await workspaceOrThrow(ctx.user.id, input.savedBlueprintId);
       return { ...workspace, startup: { ...workspace.startup, blueprint: startupBlueprintSchema.parse(JSON.parse(workspace.startup.blueprint)) } };
     } catch (error) {

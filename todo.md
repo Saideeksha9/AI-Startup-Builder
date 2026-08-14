@@ -42,3 +42,7 @@
 - [x] Show a concise working status while the advisor is generating a reply.
 - [x] Add a visible retry action that resubmits the most recent failed advisor message.
 - [x] Test guided prompts, working status, and retry behavior.
+- [x] Diagnose and repair the reported positive-number validation error.
+- [x] Let users pin favorite advisor starter questions for reuse.
+- [x] Add one-click copying for assistant response bubbles.
+- [x] Test the validation repair, pinned prompts, and response-copy interaction.
