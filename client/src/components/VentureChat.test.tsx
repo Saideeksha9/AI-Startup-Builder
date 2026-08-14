@@ -87,6 +87,20 @@ describe("VentureChat", () => {
     expect(writeClipboard).toHaveBeenCalledWith("Start with ten customer interviews.");
   });
 
+  it("renders detailed step-by-step advisor guidance without collapsing its sections", () => {
+    chatState.history.data = [{
+      id: 12,
+      role: "assistant",
+      content: "1) What this means\nYour market needs proof of demand before more build work.\n\n2) Step-by-step actions\n1. Interview ten buyers.\n2. Run a small pilot.\n\n3) Risks and mitigations\nIf demand is weak, narrow the workflow before investing further.",
+    }];
+    render(<VentureChat startups={[]} activeStartupId={null} onWorkspaceChange={vi.fn()} />);
+
+    fireEvent.click(screen.getByRole("button", { name: "Open Venture Advisor" }));
+    expect(screen.getByText(/1\) What this means/)).toBeInTheDocument();
+    expect(screen.getByText(/2\) Step-by-step actions/)).toBeInTheDocument();
+    expect(screen.getByText(/3\) Risks and mitigations/)).toBeInTheDocument();
+  });
+
   it("shows a retry action that resubmits the failed advisor request", () => {
     chatState.send.error = { message: "The venture advisor could not respond. Please try again." };
     render(<VentureChat startups={[]} activeStartupId={null} onWorkspaceChange={vi.fn()} />);

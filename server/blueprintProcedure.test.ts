@@ -42,6 +42,33 @@ const validBlueprint = {
       },
     ],
   },
+  ventureWorkspace: {
+    detailedActionPlan: [
+      { phase: "Validate", objective: "Confirm that clinic teams will pay for a simpler recurring compliance workflow.", actions: ["Interview ten clinic operations leaders about recurring compliance work.", "Test a focused pilot offer with qualified independent clinics."], whyItMatters: "This avoids building a workflow that does not address a painful and urgent customer problem." },
+      { phase: "Pilot", objective: "Run a measured pilot with early clinic partners before widening scope.", actions: ["Recruit two clinics with active compliance deadlines.", "Track time saved and workflow completion during the pilot."], whyItMatters: "Measured pilot evidence makes the next product and sales decision more reliable." },
+      { phase: "Launch", objective: "Create a repeatable early customer acquisition process from pilot outcomes.", actions: ["Turn the pilot outcome into a clear customer case study.", "Run targeted outreach to similar independent clinic operators."], whyItMatters: "A repeatable acquisition process is necessary before increasing spending." },
+      { phase: "Improve", objective: "Improve activation and retention using evidence from real users.", actions: ["Review onboarding friction with every pilot customer.", "Prioritise the most repeated customer workflow request."], whyItMatters: "Retention signals whether the product is creating durable value." },
+    ],
+    initialMilestones: [
+      { title: "Complete ten clinic discovery interviews", targetOffsetDays: 14, objective: "Validate the highest-friction compliance workflow." },
+      { title: "Recruit two qualified pilot clinics", targetOffsetDays: 30, objective: "Secure hands-on early users for the initial workflow." },
+      { title: "Launch the first workflow pilot", targetOffsetDays: 45, objective: "Measure time saved and completion outcomes." },
+      { title: "Review pilot evidence and iterate", targetOffsetDays: 60, objective: "Use adoption evidence to set the next roadmap." },
+    ],
+    investmentScenarios: [
+      { name: "Bootstrap pilot", fundingAmount: "0", valuation: "0", runwayMonths: 6, useOfFunds: "Founder time, customer interviews, and a focused pilot implementation." },
+      { name: "Pre-seed validation", fundingAmount: "500000", valuation: "4000000", runwayMonths: 18, useOfFunds: "Product engineering, customer onboarding, and targeted healthcare sales." },
+    ],
+    risks: [
+      { title: "Teams may resist changing established compliance habits", severity: "high", likelihood: "medium", mitigationNotes: "Start with a narrow workflow and quantify time saved during pilots." },
+      { title: "Sensitive data may create security concerns", severity: "high", likelihood: "medium", mitigationNotes: "Use least-privilege access and validate buyer requirements early." },
+      { title: "Healthcare procurement may slow sales", severity: "medium", likelihood: "high", mitigationNotes: "Target independent clinics and use short paid pilots to reduce friction." },
+    ],
+    crisisPlans: [
+      { title: "Respond to a critical workflow outage", triggerConditions: "A clinic cannot access a workflow near a reporting deadline.", responseSteps: "Acknowledge the issue, activate fallback guidance, restore access, and document the incident review.", owner: "Operations lead" },
+      { title: "Respond to a customer data concern", triggerConditions: "A customer reports suspected unauthorised data access.", responseSteps: "Contain access, investigate the scope, and provide a documented customer update.", owner: "Security lead" },
+    ],
+  },
 };
 
 describe("blueprint.generate", () => {

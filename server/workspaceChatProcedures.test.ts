@@ -201,6 +201,11 @@ describe("venture workspace and chat procedures", () => {
     expect(createRisk).toHaveBeenCalledWith(expect.objectContaining({ userId: 42, savedBlueprintId: 12, title: "Regulatory approval delay" }));
     expect(createChatMessage).toHaveBeenCalledTimes(2);
     expect(result.linkedRecordType).toBe("risk");
+    expect(invokeLLM).toHaveBeenCalledWith(expect.objectContaining({
+      messages: expect.arrayContaining([
+        expect.objectContaining({ role: "system", content: expect.stringContaining("Step-by-step actions") }),
+      ]),
+    }));
   });
 
   it("parses plain text JSON with omitted optional action properties", async () => {

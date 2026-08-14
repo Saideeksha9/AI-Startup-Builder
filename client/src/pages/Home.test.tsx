@@ -9,6 +9,7 @@ const resetGenerate = vi.fn();
 const refetchSavedStartups = vi.fn();
 const refetchWorkspace = vi.fn();
 const topicUseQuery = vi.fn();
+const openWindow = vi.fn();
 
 const blueprint = {
   startupName: "CareLoop",
@@ -26,6 +27,22 @@ const blueprint = {
       { title: "Deadline clarity", description: "Turn recurring requirements into visible, accountable workflows that teams can complete on time." },
       { title: "Audit-ready evidence", description: "Collect and retrieve the documentation you need without rebuilding the trail from scratch." },
     ],
+  },
+};
+
+const proactiveBlueprint = {
+  ...blueprint,
+  ventureWorkspace: {
+    detailedActionPlan: [{
+      phase: "Validate",
+      objective: "Confirm independent clinic demand before expanding the product scope.",
+      actions: ["Interview ten clinic operations leaders about their current workflow.", "Test a narrow pilot offer with two qualified clinic teams."],
+      whyItMatters: "This reduces the chance of investing in a workflow that clinics do not value enough to adopt.",
+    }],
+    initialMilestones: [],
+    investmentScenarios: [],
+    risks: [],
+    crisisPlans: [],
   },
 };
 
@@ -73,6 +90,9 @@ describe("Home venture workspace", () => {
     refetchSavedStartups.mockClear();
     refetchWorkspace.mockClear();
     topicUseQuery.mockClear();
+    openWindow.mockClear();
+    Object.defineProperty(window, "open", { value: openWindow, writable: true });
+    window.sessionStorage.clear();
     authState.user = null;
     authState.loading = false;
     authState.isAuthenticated = false;
@@ -132,6 +152,25 @@ describe("Home venture workspace", () => {
     expect(screen.getByText("Marketing Plan")).toBeInTheDocument();
     expect(screen.getByText("Generated Landing Page")).toBeInTheDocument();
     expect(screen.getByText("One source of truth")).toBeInTheDocument();
+  });
+
+  it("shows proactive step-by-step guidance when the generated blueprint includes it", () => {
+    generateState.data = proactiveBlueprint;
+    render(<Home />);
+
+    expect(screen.getByText("Step-by-step launch guide")).toBeInTheDocument();
+    expect(screen.getByText("Confirm independent clinic demand before expanding the product scope.")).toBeInTheDocument();
+    expect(screen.getByText(/This reduces the chance of investing/i)).toBeInTheDocument();
+  });
+
+  it("opens the generated landing page as an interactive preview", () => {
+    generateState.data = blueprint;
+    render(<Home />);
+
+    fireEvent.click(screen.getByRole("button", { name: "See your workflow" }));
+
+    expect(openWindow).toHaveBeenCalledWith("/landing-preview", "_blank", "noopener");
+    expect(window.sessionStorage.getItem("autonomous-ai-startup-landing-preview")).toContain("CareLoop");
   });
 
   it("opens a signed-in saved venture with its workspace views and chat", () => {

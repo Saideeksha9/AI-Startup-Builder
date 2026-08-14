@@ -10,6 +10,7 @@ import {
   Check,
   CheckCircle2,
   Clock3,
+  ExternalLink,
   Landmark,
   LayoutDashboard,
   Lightbulb,
@@ -40,6 +41,13 @@ type StartupBlueprint = {
     heroSubheadline: string;
     ctaButtonText: string;
     features: Array<{ title: string; description: string }>;
+  };
+  ventureWorkspace?: {
+    detailedActionPlan: Array<{ phase: string; objective: string; actions: string[]; whyItMatters: string }>;
+    initialMilestones: Array<{ title: string; targetOffsetDays: number; objective: string }>;
+    investmentScenarios: Array<{ name: string; fundingAmount: string; valuation: string; runwayMonths: number; useOfFunds: string }>;
+    risks: Array<{ title: string; severity: "low" | "medium" | "high" | "critical"; likelihood: "low" | "medium" | "high"; mitigationNotes: string }>;
+    crisisPlans: Array<{ title: string; triggerConditions: string; responseSteps: string; owner: string }>;
   };
 };
 
@@ -117,6 +125,7 @@ export default function Home() {
   const selectedField = fields.data?.find(field => field.id === Number(fieldId));
   const selectedTopic = topics.data?.find(topic => topic.id === Number(topicId));
   const saveStatus = saveBlueprint.isPending ? "Saving" : saveBlueprint.isSuccess ? "Saved" : saveBlueprint.isError ? "Save failed" : null;
+  const detailedActionPlan = blueprint?.ventureWorkspace?.detailedActionPlan ?? [];
   const errorMessage = inputError ?? generateBlueprint.error?.message ?? saveBlueprint.error?.message ?? savedStartups.error?.message ?? workspace.error?.message ?? (fieldId ? topics.error?.message : null);
 
   useEffect(() => {
@@ -163,6 +172,12 @@ export default function Home() {
     setInputError(null);
     setSelectedSavedStartup(startup);
     setActiveStartupId(startup.id);
+  }
+
+  function openLandingPagePreview() {
+    if (!blueprint) return;
+    window.sessionStorage.setItem("autonomous-ai-startup-landing-preview", JSON.stringify(blueprint));
+    window.open("/landing-preview", "_blank", "noopener");
   }
 
   function addWorkspaceMilestone(event: FormEvent<HTMLFormElement>) {
@@ -257,7 +272,9 @@ export default function Home() {
               <article className="rounded-[2rem] border border-slate-200 bg-white p-7 shadow-sm sm:p-8"><div className="flex items-center gap-3"><span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[#f7e9ef] text-[#bf4d7c]"><Megaphone className="h-5 w-5" aria-hidden="true" /></span><div><h2 className="text-xl font-black tracking-[-0.025em] text-black">Marketing Plan</h2><p className="mt-0.5 text-sm font-light text-slate-500">A practical path to first customers.</p></div></div><ol className="mt-8 space-y-5">{blueprint.marketingPlan.map((step, index) => <li key={step} className="flex gap-4"><span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-slate-950 text-xs font-bold text-white">{String(index + 1).padStart(2, "0")}</span><p className="pt-0.5 text-sm leading-6 text-slate-700">{step}</p></li>)}</ol></article>
             </div>
 
-            <article className="rounded-[2rem] border border-slate-200 bg-white p-7 shadow-sm sm:p-8"><div className="flex items-center gap-3"><span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[#fff2d9] text-amber-600"><LayoutDashboard className="h-5 w-5" aria-hidden="true" /></span><div><h2 className="text-xl font-black tracking-[-0.025em] text-black">Generated Landing Page</h2><p className="mt-0.5 text-sm font-light text-slate-500">A concise first impression for your product.</p></div></div><div className="mt-8 overflow-hidden rounded-[1.5rem] border border-slate-200 bg-[#f8fafc]"><div className="bg-gradient-to-br from-blue-600 to-indigo-600 px-6 py-14 text-center text-white sm:px-10 sm:py-16"><p className="text-[11px] font-bold uppercase tracking-[0.22em] text-blue-100">{blueprint.startupName}</p><h3 className="mx-auto mt-4 max-w-3xl text-3xl font-black tracking-[-0.045em] sm:text-5xl">{blueprint.landingPage.heroHeadline}</h3><p className="mx-auto mt-4 max-w-2xl text-sm font-light leading-6 text-blue-50 sm:text-base">{blueprint.landingPage.heroSubheadline}</p><button type="button" className="mt-7 inline-flex items-center gap-2 rounded-full bg-white px-5 py-3 text-sm font-bold text-blue-700 transition hover:bg-blue-50 active:scale-[0.97]">{blueprint.landingPage.ctaButtonText}<ArrowRight className="h-4 w-4" aria-hidden="true" /></button></div><div className="grid gap-4 p-5 sm:p-6 lg:grid-cols-3">{blueprint.landingPage.features.map((feature, index) => <div key={`${feature.title}-${index}`} className="rounded-2xl border border-slate-200 bg-white p-5"><Lightbulb className="h-4 w-4 text-amber-500" aria-hidden="true" /><h4 className="mt-5 text-base font-black tracking-[-0.02em] text-black">{feature.title}</h4><p className="mt-2 text-sm font-light leading-6 text-slate-600">{feature.description}</p></div>)}</div></div></article>
+            {detailedActionPlan.length ? <article className="rounded-[2rem] border border-slate-200 bg-white p-7 shadow-sm sm:p-8"><div className="flex items-center gap-3"><span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-600"><CheckCircle2 className="h-5 w-5" aria-hidden="true" /></span><div><h2 className="text-xl font-black tracking-[-0.025em] text-black">Step-by-step launch guide</h2><p className="mt-0.5 text-sm font-light text-slate-500">Proactive actions, likely consequences, and why each phase matters.</p></div></div><div className="mt-8 grid gap-4 lg:grid-cols-2">{detailedActionPlan.map((phase, index) => <section key={`${phase.phase}-${index}`} className="rounded-2xl border border-slate-200 bg-slate-50 p-5"><p className="text-[11px] font-bold uppercase tracking-[0.16em] text-emerald-700">Phase {index + 1} · {phase.phase}</p><h3 className="mt-2 text-base font-black text-slate-900">{phase.objective}</h3><ol className="mt-4 space-y-2">{phase.actions.map((action, actionIndex) => <li key={action} className="flex gap-2 text-sm leading-6 text-slate-700"><span className="mt-1 flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-[9px] font-bold text-emerald-700">{actionIndex + 1}</span>{action}</li>)}</ol><p className="mt-4 border-t border-slate-200 pt-3 text-xs leading-5 text-slate-500"><span className="font-bold text-slate-700">Why this matters: </span>{phase.whyItMatters}</p></section>)}</div></article> : null}
+
+            <article className="rounded-[2rem] border border-slate-200 bg-white p-7 shadow-sm sm:p-8"><div className="flex items-center gap-3"><span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[#fff2d9] text-amber-600"><LayoutDashboard className="h-5 w-5" aria-hidden="true" /></span><div><h2 className="text-xl font-black tracking-[-0.025em] text-black">Generated Landing Page</h2><p className="mt-0.5 text-sm font-light text-slate-500">An interactive preview of how visitors could first meet your product.</p></div></div><div className="mt-8 overflow-hidden rounded-[1.5rem] border border-slate-200 bg-[#f8fafc]"><div className="bg-gradient-to-br from-blue-600 to-indigo-600 px-6 py-14 text-center text-white sm:px-10 sm:py-16"><p className="text-[11px] font-bold uppercase tracking-[0.22em] text-blue-100">{blueprint.startupName}</p><h3 className="mx-auto mt-4 max-w-3xl text-3xl font-black tracking-[-0.045em] sm:text-5xl">{blueprint.landingPage.heroHeadline}</h3><p className="mx-auto mt-4 max-w-2xl text-sm font-light leading-6 text-blue-50 sm:text-base">{blueprint.landingPage.heroSubheadline}</p><button type="button" onClick={openLandingPagePreview} className="mt-7 inline-flex items-center gap-2 rounded-full bg-white px-5 py-3 text-sm font-bold text-blue-700 transition hover:bg-blue-50 active:scale-[0.97]">{blueprint.landingPage.ctaButtonText}<ExternalLink className="h-4 w-4" aria-hidden="true" /></button><p className="mt-3 text-xs text-blue-100">Opens a working standalone preview in a new tab.</p></div><div className="grid gap-4 p-5 sm:p-6 lg:grid-cols-3">{blueprint.landingPage.features.map((feature, index) => <div key={`${feature.title}-${index}`} className="rounded-2xl border border-slate-200 bg-white p-5"><Lightbulb className="h-4 w-4 text-amber-500" aria-hidden="true" /><h4 className="mt-5 text-base font-black tracking-[-0.02em] text-black">{feature.title}</h4><p className="mt-2 text-sm font-light leading-6 text-slate-600">{feature.description}</p></div>)}</div></div></article>
 
             {activeStartupId ? <section className="rounded-[2rem] border border-slate-200 bg-white p-7 shadow-sm sm:p-8"><div className="flex items-center gap-3"><span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-slate-950 text-white"><Sparkles className="h-5 w-5" aria-hidden="true" /></span><div><h2 className="text-xl font-black tracking-[-0.025em] text-black">Venture workspace</h2><p className="mt-0.5 text-sm font-light text-slate-500">Durable operational records for this startup. Investment scenarios are planning assumptions, not financial advice.</p></div></div>
               {workspace.isLoading ? <div className="mt-8 flex items-center gap-2 text-sm text-slate-500"><LoaderCircle className="h-4 w-4 animate-spin" aria-hidden="true" />Loading private workspace...</div> : <div className="mt-8 grid gap-5 lg:grid-cols-2">

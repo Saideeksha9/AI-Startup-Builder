@@ -46,3 +46,10 @@
 - [x] Let users pin favorite advisor starter questions for reuse.
 - [x] Add one-click copying for assistant response bubbles.
 - [x] Test the validation repair, pinned prompts, and response-copy interaction.
+- [x] Add automatic milestone, risk, crisis, and scenario recommendations to new startup blueprints.
+- [x] Persist recommended venture workspace records when an authenticated startup is saved.
+- [x] Upgrade advisor replies with detailed, structured, step-by-step action guidance.
+- [x] Make generated landing pages actionable through a working preview and CTA behavior.
+- [x] Test automatic venture planning, detailed advisor output, and landing-page interactions.
+- [x] Require non-empty proactive recommendations for newly generated startup blueprints.
+- [x] Test populated generated workspace recommendations and rendered detailed advisor replies.

@@ -40,7 +40,7 @@ const actionSchema = z.object({
 }).strip();
 
 const chatResponseSchema = z.object({
-  reply: z.string().min(1).max(2400),
+  reply: z.string().min(1).max(6000),
   persist: z.boolean(),
   action: actionSchema,
 }).strip();
@@ -53,7 +53,7 @@ const chatInputSchema = z.object({
 const explicitConfirmation = /\b(confirm|confirmed|approve|approved|go ahead|apply (?:it|the update)|save (?:it|the update))\b/i;
 
 const rawAdvisorResponseSchema = z.object({
-  reply: z.string().min(1).max(2400),
+  reply: z.string().min(1).max(6000),
   persist: z.boolean().optional().default(false),
   action: z.record(z.string(), z.unknown()).optional().default({}),
 }).passthrough();
@@ -196,7 +196,7 @@ export const chatRouter = router({
         messages: [
           {
             role: "system",
-            content: `You are the shared venture advisor for a founder's private startup portfolio. Use the injected context as the sole source of startup facts. Be concise, practical, and clear that investment scenarios are planning assumptions rather than financial advice.\n\nDistinguish conversation from durable records. Set operation=create only for a new durable artifact and operation=update only for a record already included in the private context. Set persist=true only if the current user message clearly asks to create a record, or explicitly confirms an already-proposed update. When an update is requested but confirmation is absent, describe the precise proposed edit, set persist=false, and ask the founder to reply "confirm". In General mode, never persist an action.\n\nRespond with JSON only: an object with reply (string), persist (boolean), and action (object). action must include kind, operation, recordId, title, targetDate, status, severity, likelihood, mitigationNotes, fundingAmount, valuation, runwayMonths, useOfFunds, triggerConditions, responseSteps, owner, and riskId. Use null for any action field that does not apply. Do not use markdown fences or additional prose.`,
+            content: `You are the shared venture advisor for a founder's private startup portfolio. Use the injected context as the sole source of startup facts. Give clear, detailed, step-by-step guidance in plain language, similar to a patient expert coach. Be practical and clearly state that investment scenarios are planning assumptions rather than financial advice.\n\nFor strategic questions, structure reply as: 1) What this means, 2) Step-by-step actions, 3) What could happen if these actions are delayed or done poorly, 4) Risks and mitigations, and 5) The next action to take today. Use short headings and numbered steps inside the reply. Make assumptions explicit; never present uncertain outcomes as guaranteed.\n\nDistinguish conversation from durable records. Set operation=create only for a new durable artifact and operation=update only for a record already included in the private context. Set persist=true only if the current user message clearly asks to create a record, or explicitly confirms an already-proposed update. When an update is requested but confirmation is absent, describe the precise proposed edit, set persist=false, and ask the founder to reply "confirm". In General mode, never persist an action.\n\nRespond with JSON only: an object with reply (string), persist (boolean), and action (object). action must include kind, operation, recordId, title, targetDate, status, severity, likelihood, mitigationNotes, fundingAmount, valuation, runwayMonths, useOfFunds, triggerConditions, responseSteps, owner, and riskId. Use null for any action field that does not apply. Do not use markdown fences or additional prose.`,
           },
           {
             role: "system",
