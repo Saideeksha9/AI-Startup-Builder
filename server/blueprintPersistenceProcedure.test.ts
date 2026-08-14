@@ -4,12 +4,16 @@ vi.mock("./db", () => ({
   createCrisisPlan: vi.fn(),
   createInvestmentScenario: vi.fn(),
   createMilestone: vi.fn(),
-  createRisk: vi.fn(),
-  createSavedBlueprint: vi.fn(),
-  listSavedBlueprints: vi.fn(),
-}));
+    createRisk: vi.fn(),
+    createSavedBlueprint: vi.fn(),
+    getSavedBlueprint: vi.fn(),
+    listSavedBlueprints: vi.fn(),
+    updateSavedBlueprint: vi.fn(),
+  }));
+vi.mock("./_core/llm", () => ({ invokeLLM: vi.fn() }));
 
-import { createCrisisPlan, createInvestmentScenario, createMilestone, createRisk, createSavedBlueprint, listSavedBlueprints } from "./db";
+import { createCrisisPlan, createInvestmentScenario, createMilestone, createRisk, createSavedBlueprint, getSavedBlueprint, listSavedBlueprints, updateSavedBlueprint } from "./db";
+import { invokeLLM } from "./_core/llm";
 import { blueprintRouter } from "./routers/blueprint";
 
 const blueprint = {
@@ -162,6 +166,42 @@ describe("blueprint persistence procedures", () => {
       code: "INTERNAL_SERVER_ERROR",
       message: "We could not load your saved blueprints. Please try again.",
     });
+  });
+
+  it("adds recommendations to a legacy saved startup only after its owner requests a workspace plan", async () => {
+    const { ventureWorkspace: _legacyWorkspace, ...legacyBlueprint } = blueprint;
+    vi.mocked(getSavedBlueprint).mockResolvedValue({
+      id: 15,
+      userId: 42,
+      idea: "A platform that makes recurring clinic compliance easier for lean teams.",
+      blueprint: JSON.stringify(legacyBlueprint),
+    } as never);
+    vi.mocked(invokeLLM).mockResolvedValue({
+      choices: [{ message: { content: JSON.stringify(blueprint.ventureWorkspace) } }],
+    } as never);
+
+    await expect(authenticatedCaller().generateWorkspacePlan({ savedBlueprintId: 15 })).resolves.toEqual(blueprint);
+
+    expect(updateSavedBlueprint).toHaveBeenCalledWith(42, 15, JSON.stringify(blueprint));
+    expect(createMilestone).toHaveBeenCalledTimes(4);
+    expect(createInvestmentScenario).toHaveBeenCalledTimes(2);
+    expect(createRisk).toHaveBeenCalledTimes(3);
+    expect(createCrisisPlan).toHaveBeenCalledTimes(2);
+  });
+
+  it("does not regenerate an already planned saved startup", async () => {
+    vi.mocked(getSavedBlueprint).mockResolvedValue({
+      id: 15,
+      userId: 42,
+      idea: "A platform that makes recurring clinic compliance easier for lean teams.",
+      blueprint: JSON.stringify(blueprint),
+    } as never);
+
+    await expect(authenticatedCaller().generateWorkspacePlan({ savedBlueprintId: 15 })).resolves.toEqual(blueprint);
+
+    expect(invokeLLM).not.toHaveBeenCalled();
+    expect(updateSavedBlueprint).not.toHaveBeenCalled();
+    expect(createMilestone).not.toHaveBeenCalled();
   });
 
   it("rejects persistence requests that do not have an authenticated user", async () => {

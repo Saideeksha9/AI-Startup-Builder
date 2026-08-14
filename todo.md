@@ -60,3 +60,8 @@
 - [x] Test explicit saving, private note ownership, and reference link handling.
 - [x] Update saved-venture messaging to state that users choose when to save.
 - [x] Add unauthorized-access tests for private venture note creation, retrieval, and deletion.
+- [x] Remove any remaining automatic-save behavior so only an explicit Save to list action persists a blueprint.
+- [x] Ensure every saved startup can be selected and opened with the same workspace, notes, advisor, and planning views.
+- [x] Add regression tests for manual save and switching between multiple saved startup workspaces.
+- [x] Make the active startup name and workspace selection state explicit so every saved venture clearly opens its own records.
+- [x] Add a visible Notes tab or navigation control within every active venture workspace.

@@ -122,6 +122,11 @@ export async function createSavedBlueprint(input: {
   return Number(result[0].insertId);
 }
 
+export async function updateSavedBlueprint(userId: number, id: number, blueprint: string) {
+  const db = await databaseOrThrow();
+  await db.update(savedBlueprints).set({ blueprint }).where(and(eq(savedBlueprints.id, id), eq(savedBlueprints.userId, userId)));
+}
+
 export async function createInterestPendingReview(input: {
   userId: number;
   savedBlueprintId: number;

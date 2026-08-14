@@ -5,6 +5,7 @@ import Home from "./Home";
 
 const generateMutate = vi.fn();
 const saveMutate = vi.fn();
+const generateWorkspacePlanMutate = vi.fn();
 const resetGenerate = vi.fn();
 const refetchSavedStartups = vi.fn();
 const refetchWorkspace = vi.fn();
@@ -48,6 +49,17 @@ const proactiveBlueprint = {
   },
 };
 
+const legacyBlueprint = {
+  ...blueprint,
+  ventureWorkspace: {
+    detailedActionPlan: [],
+    initialMilestones: [],
+    investmentScenarios: [],
+    risks: [],
+    crisisPlans: [],
+  },
+};
+
 const authState = { user: null as { name: string | null } | null, loading: false, isAuthenticated: false, logout: vi.fn() };
 const generateState: { data: typeof blueprint | undefined; isPending: boolean; error: { message: string } | null } = { data: undefined, isPending: false, error: null };
 const saveState = { isPending: false, isSuccess: false, isError: false, error: null as { message: string } | null };
@@ -68,6 +80,7 @@ vi.mock("@/lib/trpc", () => ({
       list: { useQuery: () => ({ ...savedStartupsState, refetch: refetchSavedStartups }) },
       generate: { useMutation: () => ({ ...generateState, mutate: generateMutate, reset: resetGenerate }) },
       save: { useMutation: () => ({ ...saveState, mutate: saveMutate }) },
+      generateWorkspacePlan: { useMutation: () => ({ isPending: false, mutate: generateWorkspacePlanMutate }) },
     },
     workspace: {
       get: { useQuery: () => ({ ...workspaceState, refetch: refetchWorkspace }) },
@@ -90,6 +103,7 @@ describe("Home venture workspace", () => {
   beforeEach(() => {
     generateMutate.mockClear();
     saveMutate.mockClear();
+    generateWorkspacePlanMutate.mockClear();
     resetGenerate.mockClear();
     refetchSavedStartups.mockClear();
     refetchWorkspace.mockClear();
@@ -208,11 +222,46 @@ describe("Home venture workspace", () => {
     render(<Home />);
     fireEvent.click(screen.getByRole("button", { name: /careloop/i }));
     expect(screen.getByText("Venture workspace")).toBeInTheDocument();
+    expect(screen.getByText("Active startup: CareLoop")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Notes" })).toBeInTheDocument();
     expect(screen.getByText("Milestone roadmap")).toBeInTheDocument();
     expect(screen.getByText("Investment scenarios")).toBeInTheDocument();
     expect(screen.getByText("Risk register")).toBeInTheDocument();
     expect(screen.getAllByText("Crisis plans").length).toBeGreaterThan(0);
     expect(screen.getByTestId("venture-chat")).toBeInTheDocument();
+  });
+
+  it("offers a one-click workspace plan for legacy startups without recommendations", () => {
+    authState.user = { name: "Cherry 99" };
+    authState.isAuthenticated = true;
+    savedStartupsState.data = [{ id: 18, idea: "A clinic compliance workspace", createdAt: new Date("2026-08-12"), interestTopicId: 2, interestOtherText: null, blueprint: legacyBlueprint }];
+    workspaceState.data = { roadmap: [], scenarios: [], riskRegister: [], crisisResponsePlans: [], notes: [] };
+    render(<Home />);
+
+    fireEvent.click(screen.getByRole("button", { name: /careloop/i }));
+    expect(screen.getByText(/This startup was saved before automatic roadmap/i)).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Generate workspace plan" }));
+    expect(generateWorkspacePlanMutate).toHaveBeenCalledWith({ savedBlueprintId: 18 });
+  });
+
+  it("switches the active workspace between multiple saved startups", () => {
+    authState.user = { name: "Cherry 99" };
+    authState.isAuthenticated = true;
+    savedStartupsState.data = [
+      { id: 12, idea: "A clinic compliance workspace", createdAt: new Date("2026-08-12"), interestTopicId: 2, interestOtherText: null, blueprint },
+      { id: 19, idea: "An aerial-inspection workspace", createdAt: new Date("2026-08-13"), interestTopicId: 2, interestOtherText: null, blueprint: { ...blueprint, startupName: "AeroScan" } },
+    ];
+    workspaceState.data = { roadmap: [], scenarios: [], riskRegister: [], crisisResponsePlans: [], notes: [] };
+    render(<Home />);
+
+    fireEvent.click(screen.getByRole("button", { name: /careloop/i }));
+    expect(screen.getByText("Active startup: CareLoop")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /careloop/i })).toHaveAttribute("aria-pressed", "true");
+
+    fireEvent.click(screen.getByRole("button", { name: /aeroscan/i }));
+    expect(screen.getByText("Active startup: AeroScan")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /aeroscan/i })).toHaveAttribute("aria-pressed", "true");
   });
 
   it("creates a private venture note with an optional topic and reference link", () => {
