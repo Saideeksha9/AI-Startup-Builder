@@ -70,3 +70,8 @@
 - [x] Provide a formatted PDF download containing the startup blueprint and complete workspace records.
 - [x] Add accessible Markdown and PDF export controls to every active venture workspace.
 - [x] Add regression tests for export ownership, formatting, and download interaction.
+- [x] Create a public informational home page that explains the Autonomous AI Startup Builder.
+- [x] Add an accessible three-line menu with Home, Existing Ideas, Companies, App Info, How It Works, and Dashboard navigation.
+- [x] Add clear Sign in and Create account entry points using the existing authentication flow.
+- [x] Add a registered-user dashboard route that opens the user’s private venture workspace.
+- [x] Add regression tests for public navigation, authentication entry points, and dashboard routing.
