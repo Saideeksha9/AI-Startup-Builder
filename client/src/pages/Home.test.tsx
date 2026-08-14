@@ -1,6 +1,7 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import React from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { waitFor } from "@testing-library/react";
 import Home from "./Home";
 
 const generateMutate = vi.fn();
@@ -13,6 +14,9 @@ const topicUseQuery = vi.fn();
 const openWindow = vi.fn();
 const addNoteMutate = vi.fn();
 const deleteNoteMutate = vi.fn();
+const refetchWorkspaceExport = vi.fn();
+const downloadWorkspaceMarkdown = vi.fn();
+const downloadWorkspacePdf = vi.fn();
 
 const blueprint = {
   startupName: "CareLoop",
@@ -65,11 +69,16 @@ const generateState: { data: typeof blueprint | undefined; isPending: boolean; e
 const saveState = { isPending: false, isSuccess: false, isError: false, error: null as { message: string } | null };
 const savedStartupsState: { data: Array<{ id: number; idea: string; createdAt: Date; interestTopicId: number | null; interestOtherText: string | null; blueprint: typeof blueprint }> | undefined; isLoading: boolean; error: { message: string } | null } = { data: [], isLoading: false, error: null };
 const workspaceState: { data: unknown; isLoading: boolean; error: { message: string } | null } = { data: undefined, isLoading: false, error: null };
+const workspaceExportState: { data: unknown; isFetching: boolean; error: { message: string } | null } = { data: undefined, isFetching: false, error: null };
 const taxonomyFields = [{ id: 1, name: "Medical/Healthcare", slug: "medical-healthcare" }];
 const taxonomyTopics = [{ id: 2, fieldId: 1, name: "Telemedicine", slug: "telemedicine" }];
 
 vi.mock("@/_core/hooks/useAuth", () => ({ useAuth: () => authState }));
 vi.mock("@/components/VentureChat", () => ({ VentureChat: () => <div data-testid="venture-chat" /> }));
+vi.mock("@/lib/ventureExport", () => ({
+  downloadVentureWorkspaceMarkdown: (...args: unknown[]) => downloadWorkspaceMarkdown(...args),
+  downloadVentureWorkspacePdf: (...args: unknown[]) => downloadWorkspacePdf(...args),
+}));
 vi.mock("@/lib/trpc", () => ({
   trpc: {
     taxonomy: {
@@ -84,6 +93,7 @@ vi.mock("@/lib/trpc", () => ({
     },
     workspace: {
       get: { useQuery: () => ({ ...workspaceState, refetch: refetchWorkspace }) },
+      export: { useQuery: () => ({ ...workspaceExportState, refetch: refetchWorkspaceExport }) },
       addMilestone: { useMutation: () => ({ isPending: false, mutate: vi.fn() }) },
       updateMilestoneStatus: { useMutation: () => ({ isPending: false, mutate: vi.fn() }) },
       addInvestmentScenario: { useMutation: () => ({ isPending: false, mutate: vi.fn() }) },
@@ -111,6 +121,9 @@ describe("Home venture workspace", () => {
     openWindow.mockClear();
     addNoteMutate.mockClear();
     deleteNoteMutate.mockClear();
+    refetchWorkspaceExport.mockClear();
+    downloadWorkspaceMarkdown.mockClear();
+    downloadWorkspacePdf.mockClear();
     Object.defineProperty(window, "open", { value: openWindow, writable: true });
     window.sessionStorage.clear();
     authState.user = null;
@@ -129,6 +142,9 @@ describe("Home venture workspace", () => {
     workspaceState.data = undefined;
     workspaceState.isLoading = false;
     workspaceState.error = null;
+    workspaceExportState.data = undefined;
+    workspaceExportState.isFetching = false;
+    workspaceExportState.error = null;
   });
 
   it("shows the taxonomy-guided empty state before any venture is generated", () => {
@@ -262,6 +278,22 @@ describe("Home venture workspace", () => {
     fireEvent.click(screen.getByRole("button", { name: /aeroscan/i }));
     expect(screen.getByText("Active startup: AeroScan")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /aeroscan/i })).toHaveAttribute("aria-pressed", "true");
+  });
+
+  it("exports the active venture workspace as Markdown", async () => {
+    authState.user = { name: "Cherry 99" };
+    authState.isAuthenticated = true;
+    savedStartupsState.data = [{ id: 12, idea: "A clinic compliance workspace", createdAt: new Date("2026-08-12"), interestTopicId: 2, interestOtherText: null, blueprint }];
+    workspaceState.data = { roadmap: [], scenarios: [], riskRegister: [], crisisResponsePlans: [], notes: [] };
+    workspaceExportState.data = { startup: { idea: "A clinic compliance workspace", blueprint }, roadmap: [], scenarios: [], riskRegister: [], crisisResponsePlans: [], notes: [], advisorMessages: [] };
+    refetchWorkspaceExport.mockResolvedValue({ data: workspaceExportState.data });
+    render(<Home />);
+
+    fireEvent.click(screen.getByRole("button", { name: /careloop/i }));
+    fireEvent.click(screen.getByRole("button", { name: "Markdown" }));
+
+    await waitFor(() => expect(refetchWorkspaceExport).toHaveBeenCalled());
+    expect(downloadWorkspaceMarkdown).toHaveBeenCalledWith(workspaceExportState.data);
   });
 
   it("creates a private venture note with an optional topic and reference link", () => {

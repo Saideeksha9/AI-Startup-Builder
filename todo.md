@@ -65,3 +65,8 @@
 - [x] Add regression tests for manual save and switching between multiple saved startup workspaces.
 - [x] Make the active startup name and workspace selection state explicit so every saved venture clearly opens its own records.
 - [x] Add a visible Notes tab or navigation control within every active venture workspace.
+- [x] Add authenticated workspace export generation for the currently selected venture.
+- [x] Provide a formatted Markdown download containing the startup blueprint and complete workspace records.
+- [x] Provide a formatted PDF download containing the startup blueprint and complete workspace records.
+- [x] Add accessible Markdown and PDF export controls to every active venture workspace.
+- [x] Add regression tests for export ownership, formatting, and download interaction.

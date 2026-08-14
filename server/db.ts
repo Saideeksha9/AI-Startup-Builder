@@ -298,6 +298,21 @@ export async function listConversationMessages(userId: number, conversationId: n
   return rows.reverse();
 }
 
+export async function listWorkspaceConversationMessages(userId: number, savedBlueprintId: number) {
+  const db = await databaseOrThrow();
+  const conversations = await db
+    .select()
+    .from(chatConversations)
+    .where(and(eq(chatConversations.userId, userId), eq(chatConversations.activeStartupId, savedBlueprintId)))
+    .limit(1);
+  if (!conversations[0]) return [];
+  return db
+    .select()
+    .from(chatMessages)
+    .where(and(eq(chatMessages.userId, userId), eq(chatMessages.conversationId, conversations[0].id)))
+    .orderBy(chatMessages.createdAt);
+}
+
 export async function createChatMessage(input: {
   conversationId: number;
   userId: number;

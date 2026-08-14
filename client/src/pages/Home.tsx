@@ -4,6 +4,7 @@ import { VentureChat } from "@/components/VentureChat";
 import { VentureWorkspaceViews } from "@/components/VentureWorkspaceViews";
 import { startLogin } from "@/const";
 import { trpc } from "@/lib/trpc";
+import { downloadVentureWorkspaceMarkdown, downloadVentureWorkspacePdf } from "@/lib/ventureExport";
 import {
   ArrowRight,
   BookOpen,
@@ -12,6 +13,7 @@ import {
   CheckCircle2,
   Clock3,
   ExternalLink,
+  FileDown,
   Landmark,
   LayoutDashboard,
   Lightbulb,
@@ -91,6 +93,7 @@ export default function Home() {
   const [noteTopic, setNoteTopic] = useState("");
   const [noteContent, setNoteContent] = useState("");
   const [noteReferenceUrl, setNoteReferenceUrl] = useState("");
+  const [exportError, setExportError] = useState<string | null>(null);
   const notesSectionRef = useRef<HTMLElement | null>(null);
 
   const { user, loading: isAuthLoading, isAuthenticated, logout } = useAuth();
@@ -99,6 +102,7 @@ export default function Home() {
   const topics = trpc.taxonomy.topics.useQuery(topicQueryInput, { enabled: Boolean(fieldId), staleTime: 60_000, retry: 1 });
   const savedStartups = trpc.blueprint.list.useQuery(undefined, { enabled: isAuthenticated, retry: false, refetchOnWindowFocus: false });
   const workspace = trpc.workspace.get.useQuery({ savedBlueprintId: activeStartupId }, { enabled: Boolean(activeStartupId), refetchOnWindowFocus: false });
+  const workspaceExport = trpc.workspace.export.useQuery({ savedBlueprintId: activeStartupId }, { enabled: false, retry: false });
 
   const saveBlueprint = trpc.blueprint.save.useMutation({
     onSuccess: result => {
@@ -134,7 +138,7 @@ export default function Home() {
   const saveStatus = saveBlueprint.isPending ? "Saving" : saveBlueprint.isSuccess ? "Saved" : saveBlueprint.isError ? "Save failed" : null;
   const detailedActionPlan = blueprint?.ventureWorkspace?.detailedActionPlan ?? [];
   const activeStartupName = selectedSavedStartup?.blueprint.startupName ?? savedStartups.data?.find(startup => startup.id === activeStartupId)?.blueprint.startupName ?? null;
-  const errorMessage = inputError ?? generateBlueprint.error?.message ?? saveBlueprint.error?.message ?? savedStartups.error?.message ?? workspace.error?.message ?? (fieldId ? topics.error?.message : null);
+  const errorMessage = inputError ?? exportError ?? generateBlueprint.error?.message ?? saveBlueprint.error?.message ?? savedStartups.error?.message ?? workspace.error?.message ?? workspaceExport.error?.message ?? (fieldId ? topics.error?.message : null);
 
   useEffect(() => {
     if (activeStartupId && !savedStartups.data?.some(startup => startup.id === activeStartupId)) {
@@ -197,6 +201,22 @@ export default function Home() {
     if (!blueprint) return;
     window.sessionStorage.setItem("autonomous-ai-startup-landing-preview", JSON.stringify(blueprint));
     window.open("/landing-preview", "_blank", "noopener");
+  }
+
+  async function exportActiveWorkspace(format: "markdown" | "pdf") {
+    if (!activeStartupId) return;
+    setExportError(null);
+    try {
+      const response = await workspaceExport.refetch();
+      if (!response.data) throw new Error("The venture workspace could not be prepared for export.");
+      if (format === "markdown") {
+        downloadVentureWorkspaceMarkdown(response.data);
+      } else {
+        await downloadVentureWorkspacePdf(response.data);
+      }
+    } catch (error) {
+      setExportError(error instanceof Error ? error.message : "The venture workspace could not be exported.");
+    }
   }
 
   function addWorkspaceMilestone(event: FormEvent<HTMLFormElement>) {
@@ -302,7 +322,7 @@ export default function Home() {
 
             <article className="rounded-[2rem] border border-slate-200 bg-white p-7 shadow-sm sm:p-8"><div className="flex items-center gap-3"><span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[#fff2d9] text-amber-600"><LayoutDashboard className="h-5 w-5" aria-hidden="true" /></span><div><h2 className="text-xl font-black tracking-[-0.025em] text-black">Generated Landing Page</h2><p className="mt-0.5 text-sm font-light text-slate-500">An interactive preview of how visitors could first meet your product.</p></div></div><div className="mt-8 overflow-hidden rounded-[1.5rem] border border-slate-200 bg-[#f8fafc]"><div className="bg-gradient-to-br from-blue-600 to-indigo-600 px-6 py-14 text-center text-white sm:px-10 sm:py-16"><p className="text-[11px] font-bold uppercase tracking-[0.22em] text-blue-100">{blueprint.startupName}</p><h3 className="mx-auto mt-4 max-w-3xl text-3xl font-black tracking-[-0.045em] sm:text-5xl">{blueprint.landingPage.heroHeadline}</h3><p className="mx-auto mt-4 max-w-2xl text-sm font-light leading-6 text-blue-50 sm:text-base">{blueprint.landingPage.heroSubheadline}</p><button type="button" onClick={openLandingPagePreview} className="mt-7 inline-flex items-center gap-2 rounded-full bg-white px-5 py-3 text-sm font-bold text-blue-700 transition hover:bg-blue-50 active:scale-[0.97]">{blueprint.landingPage.ctaButtonText}<ExternalLink className="h-4 w-4" aria-hidden="true" /></button><p className="mt-3 text-xs text-blue-100">Opens a working standalone preview in a new tab.</p></div><div className="grid gap-4 p-5 sm:p-6 lg:grid-cols-3">{blueprint.landingPage.features.map((feature, index) => <div key={`${feature.title}-${index}`} className="rounded-2xl border border-slate-200 bg-white p-5"><Lightbulb className="h-4 w-4 text-amber-500" aria-hidden="true" /><h4 className="mt-5 text-base font-black tracking-[-0.02em] text-black">{feature.title}</h4><p className="mt-2 text-sm font-light leading-6 text-slate-600">{feature.description}</p></div>)}</div></div></article>
 
-            {activeStartupId ? <section className="rounded-[2rem] border border-slate-200 bg-white p-7 shadow-sm sm:p-8"><div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-start"><div className="flex items-center gap-3"><span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-slate-950 text-white"><Sparkles className="h-5 w-5" aria-hidden="true" /></span><div><h2 className="text-xl font-black tracking-[-0.025em] text-black">Venture workspace</h2><p className="mt-0.5 text-sm font-semibold text-blue-700">Active startup: {activeStartupName ?? "Loading startup"}</p><p className="mt-0.5 text-sm font-light text-slate-500">Durable operational records for this startup. Investment scenarios are planning assumptions, not financial advice.</p></div></div><Button type="button" variant="outline" onClick={() => notesSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" })} className="rounded-full border-indigo-200 bg-indigo-50 text-xs font-bold text-indigo-700 hover:bg-indigo-100"><BookOpen className="h-3.5 w-3.5" aria-hidden="true" />Notes</Button></div>
+            {activeStartupId ? <section className="rounded-[2rem] border border-slate-200 bg-white p-7 shadow-sm sm:p-8"><div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-start"><div className="flex items-center gap-3"><span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-slate-950 text-white"><Sparkles className="h-5 w-5" aria-hidden="true" /></span><div><h2 className="text-xl font-black tracking-[-0.025em] text-black">Venture workspace</h2><p className="mt-0.5 text-sm font-semibold text-blue-700">Active startup: {activeStartupName ?? "Loading startup"}</p><p className="mt-0.5 text-sm font-light text-slate-500">Durable operational records for this startup. Investment scenarios are planning assumptions, not financial advice.</p></div></div><div className="flex flex-wrap gap-2"><Button type="button" variant="outline" onClick={() => notesSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" })} className="rounded-full border-indigo-200 bg-indigo-50 text-xs font-bold text-indigo-700 hover:bg-indigo-100"><BookOpen className="h-3.5 w-3.5" aria-hidden="true" />Notes</Button><Button type="button" variant="outline" onClick={() => void exportActiveWorkspace("markdown")} disabled={workspaceExport.isFetching} className="rounded-full border-slate-200 bg-white text-xs font-bold text-slate-700 hover:bg-slate-50"><FileDown className="h-3.5 w-3.5" aria-hidden="true" />{workspaceExport.isFetching ? "Preparing..." : "Markdown"}</Button><Button type="button" onClick={() => void exportActiveWorkspace("pdf")} disabled={workspaceExport.isFetching} className="rounded-full bg-slate-950 text-xs font-bold text-white hover:bg-slate-800"><FileDown className="h-3.5 w-3.5" aria-hidden="true" />{workspaceExport.isFetching ? "Preparing..." : "PDF"}</Button></div></div>
               {workspace.isLoading ? <div className="mt-8 flex items-center gap-2 text-sm text-slate-500"><LoaderCircle className="h-4 w-4 animate-spin" aria-hidden="true" />Loading private workspace...</div> : <div className="mt-8 grid gap-5 lg:grid-cols-2">
                 <article className="rounded-2xl border border-slate-200 bg-slate-50 p-5"><div className="flex items-center gap-2"><Target className="h-4 w-4 text-blue-600" aria-hidden="true" /><h3 className="font-black text-slate-900">Milestone roadmap</h3></div><div className="mt-4 space-y-3">{workspace.data?.roadmap.map(milestone => <div key={milestone.id} className="flex items-center justify-between gap-3 rounded-xl bg-white p-3"><div><p className="text-sm font-semibold text-slate-800">{milestone.title}</p><p className="mt-0.5 text-[11px] text-slate-500">{milestone.targetDate ? new Date(milestone.targetDate).toLocaleDateString() : "No target date"}</p></div><select value={milestone.status} onChange={event => updateMilestone.mutate({ savedBlueprintId: activeStartupId, id: milestone.id, status: event.target.value as "planned" | "in_progress" | "done" | "blocked" })} className="rounded-lg border border-slate-200 bg-white px-2 py-1 text-[11px] font-semibold text-slate-600"><option value="planned">Planned</option><option value="in_progress">In progress</option><option value="done">Done</option><option value="blocked">Blocked</option></select></div>)}{!workspace.data?.roadmap.length ? <p className="text-xs text-slate-500">No milestones yet.</p> : null}</div><form onSubmit={addWorkspaceMilestone} className="mt-4 grid gap-2 sm:grid-cols-[1fr_auto_auto]"><input value={milestoneTitle} onChange={event => setMilestoneTitle(event.target.value)} placeholder="Add milestone" className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs outline-none" /><input value={milestoneDate} onChange={event => setMilestoneDate(event.target.value)} type="date" className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs outline-none" /><Button type="submit" disabled={addMilestone.isPending} className="rounded-xl bg-slate-950 px-3 text-xs text-white"><Plus className="h-3.5 w-3.5" aria-hidden="true" />Add</Button></form></article>
                 <article className="rounded-2xl border border-slate-200 bg-slate-50 p-5"><div className="flex items-center gap-2"><Landmark className="h-4 w-4 text-emerald-600" aria-hidden="true" /><h3 className="font-black text-slate-900">Investment scenarios</h3></div><div className="mt-4 space-y-3">{workspace.data?.scenarios.map(scenario => <div key={scenario.id} className="rounded-xl bg-white p-3"><p className="text-sm font-semibold text-slate-800">{scenario.name}</p><p className="mt-1 text-xs text-slate-500">Funding {scenario.fundingAmount ?? "—"} · Valuation {scenario.valuation ?? "—"} · Runway {scenario.runwayMonths ?? "—"} months</p></div>)}{!workspace.data?.scenarios.length ? <p className="text-xs text-slate-500">No funding scenarios yet.</p> : null}</div><form onSubmit={addWorkspaceScenario} className="mt-4 grid gap-2 sm:grid-cols-2"><input value={scenarioName} onChange={event => setScenarioName(event.target.value)} placeholder="Scenario name" className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs outline-none" /><CurrencyInput value={scenarioFunding} onChange={setScenarioFunding} placeholder="Funding amount" /><CurrencyInput value={scenarioValuation} onChange={setScenarioValuation} placeholder="Valuation" /><input value={scenarioRunway} onChange={event => setScenarioRunway(event.target.value.replace(/[^0-9]/g, ""))} inputMode="numeric" placeholder="Runway (months)" className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs outline-none" /><Button type="submit" disabled={addScenario.isPending} className="col-span-full rounded-xl bg-slate-950 text-xs text-white"><Plus className="h-3.5 w-3.5" aria-hidden="true" />Add funding scenario</Button></form></article>

@@ -12,6 +12,7 @@ import {
   deleteRisk,
   deleteVentureNote,
   getVentureWorkspace,
+  listWorkspaceConversationMessages,
   updateCrisisPlan,
   updateInvestmentScenario,
   updateMilestone,
@@ -41,6 +42,22 @@ export const workspaceRouter = router({
       if (error instanceof TRPCError) throw error;
       console.error("Loading venture workspace failed", error);
       throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "The venture workspace could not be loaded." });
+    }
+  }),
+  export: protectedProcedure.input(z.object({ savedBlueprintId: z.number().int().positive().nullable() })).query(async ({ ctx, input }) => {
+    try {
+      if (input.savedBlueprintId === null) return null;
+      const workspace = await workspaceOrThrow(ctx.user.id, input.savedBlueprintId);
+      const advisorMessages = await listWorkspaceConversationMessages(ctx.user.id, input.savedBlueprintId);
+      return {
+        ...workspace,
+        advisorMessages,
+        startup: { ...workspace.startup, blueprint: startupBlueprintSchema.parse(JSON.parse(workspace.startup.blueprint)) },
+      };
+    } catch (error) {
+      if (error instanceof TRPCError) throw error;
+      console.error("Exporting venture workspace failed", error);
+      throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "The venture workspace could not be exported." });
     }
   }),
   addMilestone: protectedProcedure.input(ventureIdSchema.extend({

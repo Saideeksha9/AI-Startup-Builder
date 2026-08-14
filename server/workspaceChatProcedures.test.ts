@@ -14,6 +14,7 @@ vi.mock("./db", () => ({
   getPortfolioContext: vi.fn(),
   getVentureWorkspace: vi.fn(),
   listConversationMessages: vi.fn(),
+  listWorkspaceConversationMessages: vi.fn(),
   updateMilestoneStatus: vi.fn(),
   updateMilestone: vi.fn(),
   updateInvestmentScenario: vi.fn(),
@@ -33,6 +34,7 @@ import {
   getOrCreateConversation,
   getVentureWorkspace,
   listConversationMessages,
+  listWorkspaceConversationMessages,
   updateCrisisPlan,
   updateInvestmentScenario,
   updateMilestone,
@@ -127,6 +129,19 @@ describe("venture workspace and chat procedures", () => {
   it("returns an empty workspace state without validating an inactive startup as id zero", async () => {
     await expect(caller(workspaceRouter).get({ savedBlueprintId: null })).resolves.toBeNull();
     expect(getVentureWorkspace).not.toHaveBeenCalled();
+  });
+
+  it("exports only the active owner’s complete workspace, including existing advisor messages", async () => {
+    vi.mocked(listWorkspaceConversationMessages).mockResolvedValue([
+      { id: 4, userId: 42, conversationId: 7, savedBlueprintId: 12, role: "assistant", content: "Start with ten interviews.", createdAt: new Date("2026-08-14") },
+    ] as never);
+
+    const result = await caller(workspaceRouter).export({ savedBlueprintId: 12 });
+
+    expect(getVentureWorkspace).toHaveBeenCalledWith(42, 12);
+    expect(listWorkspaceConversationMessages).toHaveBeenCalledWith(42, 12);
+    expect(result?.startup.blueprint.startupName).toBe("CareLoop");
+    expect(result?.advisorMessages).toEqual(expect.arrayContaining([expect.objectContaining({ content: "Start with ten interviews." })]));
   });
 
   it("creates a risk record under the authenticated user and active startup", async () => {
