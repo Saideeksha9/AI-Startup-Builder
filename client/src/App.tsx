@@ -7,6 +7,7 @@ import { ThemeProvider } from "./contexts/ThemeContext";
 import DashboardAccess from "./pages/DashboardAccess";
 import LandingPreview from "./pages/LandingPreview";
 import PublicHome from "./pages/PublicHome";
+import { RegisterPage, SignInPage } from "./pages/AccountAccess";
 
 function Router() {
   // make sure to consider if you need authentication for certain routes
@@ -14,6 +15,8 @@ function Router() {
     <Switch>
       <Route path={"/"} component={PublicHome} />
       <Route path={"/dashboard"} component={DashboardAccess} />
+      <Route path={"/sign-in"} component={SignInPage} />
+      <Route path={"/register"} component={RegisterPage} />
       <Route path={"/landing-preview"} component={LandingPreview} />
       <Route path={"/404"} component={NotFound} />
       {/* Final fallback route */}

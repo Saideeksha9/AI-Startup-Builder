@@ -29,3 +29,8 @@ export const startLogin = () => {
 
   window.location.href = url.toString();
 };
+
+// The secure provider portal supports account creation from the same verified
+// entry point. Keep a semantic wrapper so the UI can offer a distinct Register
+// page without relying on undocumented OAuth query values.
+export const startRegistration = () => startLogin();

@@ -1,25 +1,15 @@
 import { useAuth } from "@/_core/hooks/useAuth";
+import { AppNavigation } from "@/components/AppNavigation";
 import { Button } from "@/components/ui/button";
-import { startLogin } from "@/const";
-import { ArrowRight, BarChart3, Bot, BriefcaseBusiness, CheckCircle2, Compass, Menu, ShieldCheck, Sparkles, X } from "lucide-react";
-import React, { useState } from "react";
+import { ArrowRight, Bot, BriefcaseBusiness, CheckCircle2, Compass, ShieldCheck } from "lucide-react";
+import React from "react";
 import { useLocation } from "wouter";
 
-const menuItems = [
-  { label: "Home", target: "top" },
-  { label: "Existing Ideas", target: "existing-ideas" },
-  { label: "Companies", target: "companies" },
-  { label: "App Info", target: "app-info" },
-  { label: "How It Works", target: "how-it-works" },
-] as const;
-
 export default function PublicHome() {
-  const { isAuthenticated, loading } = useAuth();
+  const { isAuthenticated } = useAuth();
   const [, setLocation] = useLocation();
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   function scrollTo(target: string) {
-    setIsMenuOpen(false);
     if (target === "top") {
       window.scrollTo({ top: 0, behavior: "smooth" });
       return;
@@ -32,26 +22,12 @@ export default function PublicHome() {
       setLocation("/dashboard");
       return;
     }
-    startLogin();
+    setLocation("/register");
   }
 
   return (
     <main id="top" className="min-h-screen overflow-x-hidden bg-[#f8fafc] text-slate-950">
-      <header className="sticky top-0 z-30 border-b border-slate-200/70 bg-[#f8fafc]/85 backdrop-blur-xl">
-        <div className="container flex h-[76px] items-center justify-between">
-          <button type="button" onClick={() => scrollTo("top")} className="inline-flex items-center gap-2 text-left" aria-label="Go to home">
-            <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-blue-600 text-white"><Sparkles className="h-4 w-4" aria-hidden="true" /></span>
-            <span className="hidden text-sm font-black tracking-[-0.02em] text-slate-900 sm:block">Autonomous AI Startup Builder</span>
-          </button>
-
-          <div className="flex items-center gap-2">
-            {loading ? <span className="h-9 w-24 animate-pulse rounded-full bg-slate-200" aria-label="Checking account" /> : isAuthenticated ? <Button type="button" onClick={openDashboard} className="rounded-full bg-slate-950 px-4 text-xs font-bold text-white hover:bg-slate-800"><BarChart3 className="h-3.5 w-3.5" aria-hidden="true" />Dashboard</Button> : <><Button type="button" variant="outline" onClick={startLogin} className="hidden rounded-full border-slate-200 bg-white px-4 text-xs font-bold text-slate-700 hover:bg-slate-50 sm:inline-flex">Sign in</Button><Button type="button" onClick={startLogin} className="hidden rounded-full bg-slate-950 px-4 text-xs font-bold text-white hover:bg-slate-800 sm:inline-flex">Create account</Button></>}
-            <Button type="button" variant="outline" size="icon" onClick={() => setIsMenuOpen(open => !open)} aria-expanded={isMenuOpen} aria-controls="public-navigation" aria-label={isMenuOpen ? "Close navigation menu" : "Open navigation menu"} className="rounded-xl border-slate-200 bg-white text-slate-800 hover:bg-slate-50"><span className="sr-only">Navigation</span>{isMenuOpen ? <X className="h-5 w-5" aria-hidden="true" /> : <Menu className="h-5 w-5" aria-hidden="true" />}</Button>
-          </div>
-        </div>
-
-        {isMenuOpen ? <nav id="public-navigation" aria-label="Public navigation" className="border-t border-slate-200 bg-white shadow-xl"><div className="container grid gap-1 py-4 sm:grid-cols-2">{menuItems.map(item => <button key={item.target} type="button" onClick={() => scrollTo(item.target)} className="rounded-xl px-4 py-3 text-left text-sm font-bold text-slate-700 transition hover:bg-blue-50 hover:text-blue-700">{item.label}</button>)}<button type="button" onClick={() => { setIsMenuOpen(false); openDashboard(); }} className="rounded-xl px-4 py-3 text-left text-sm font-bold text-slate-700 transition hover:bg-blue-50 hover:text-blue-700">Dashboard</button>{!isAuthenticated ? <div className="mt-2 flex gap-2 border-t border-slate-100 pt-4 sm:col-span-2"><Button type="button" variant="outline" onClick={startLogin} className="rounded-full border-slate-200 bg-white text-xs font-bold">Sign in</Button><Button type="button" onClick={startLogin} className="rounded-full bg-slate-950 text-xs font-bold text-white">Create account</Button></div> : null}</div></nav> : null}
-      </header>
+      <AppNavigation />
 
       <section className="relative isolate overflow-hidden border-b border-slate-200/70">
         <div className="absolute -left-24 top-12 -z-10 h-72 w-72 rounded-full bg-blue-100/80 blur-3xl" /><div className="absolute -right-24 top-0 -z-10 h-80 w-80 rounded-full bg-indigo-100/80 blur-3xl" />

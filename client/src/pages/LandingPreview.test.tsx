@@ -1,9 +1,11 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import React from "react";
-import { beforeEach, describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import LandingPreview from "./LandingPreview";
 
 const storageKey = "autonomous-ai-startup-landing-preview";
+
+vi.mock("@/components/AppNavigation", () => ({ AppNavigation: () => <div data-testid="app-navigation" /> }));
 
 describe("LandingPreview", () => {
   beforeEach(() => window.sessionStorage.clear());

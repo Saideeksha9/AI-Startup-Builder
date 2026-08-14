@@ -75,3 +75,8 @@
 - [x] Add clear Sign in and Create account entry points using the existing authentication flow.
 - [x] Add a registered-user dashboard route that opens the user’s private venture workspace.
 - [x] Add regression tests for public navigation, authentication entry points, and dashboard routing.
+- [x] Keep the three-line navigation available on the dashboard and every primary in-app page.
+- [x] Add dedicated Sign in and Create account entry routes with clear authentication guidance.
+- [x] Update public navigation to link directly to the dedicated account-access routes.
+- [x] Add regression tests for persistent navigation and account-access routing.
+- [x] Use the verified secure provider entry point for registration rather than an undocumented account-creation parameter.

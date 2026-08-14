@@ -266,7 +266,7 @@ export default function Home() {
                 <Button type="button" variant="ghost" size="icon" onClick={() => void logout()} aria-label="Sign out" className="h-8 w-8 rounded-full text-slate-500 hover:bg-slate-100 hover:text-slate-900"><LogOut className="h-4 w-4" aria-hidden="true" /></Button>
               </div>
             ) : (
-              <Button type="button" variant="outline" onClick={startLogin} className="h-9 rounded-full border-slate-200 bg-white px-4 text-xs font-semibold text-slate-700 shadow-sm hover:bg-slate-50"><LogIn className="h-3.5 w-3.5" aria-hidden="true" />Sign in to save</Button>
+              <Button type="button" variant="outline" onClick={() => startLogin()} className="h-9 rounded-full border-slate-200 bg-white px-4 text-xs font-semibold text-slate-700 shadow-sm hover:bg-slate-50"><LogIn className="h-3.5 w-3.5" aria-hidden="true" />Sign in to save</Button>
             )}
           </div>
           <div className="inline-flex items-center gap-2 text-[11px] font-bold uppercase tracking-[0.24em] text-slate-500"><Rocket className="h-4 w-4 text-blue-600" aria-hidden="true" />Autonomous AI Startup Builder</div>
