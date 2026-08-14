@@ -8,6 +8,7 @@ const saveMutate = vi.fn();
 const resetGenerate = vi.fn();
 const refetchSavedStartups = vi.fn();
 const refetchWorkspace = vi.fn();
+const topicUseQuery = vi.fn();
 
 const blueprint = {
   startupName: "CareLoop",
@@ -42,7 +43,7 @@ vi.mock("@/lib/trpc", () => ({
   trpc: {
     taxonomy: {
       fields: { useQuery: () => ({ data: taxonomyFields, isLoading: false }) },
-      topics: { useQuery: () => ({ data: taxonomyTopics, isLoading: false }) },
+      topics: { useQuery: (...args: unknown[]) => { topicUseQuery(...args); return { data: taxonomyTopics, isLoading: false, isError: false, error: null }; } },
     },
     blueprint: {
       list: { useQuery: () => ({ ...savedStartupsState, refetch: refetchSavedStartups }) },
@@ -71,6 +72,7 @@ describe("Home venture workspace", () => {
     resetGenerate.mockClear();
     refetchSavedStartups.mockClear();
     refetchWorkspace.mockClear();
+    topicUseQuery.mockClear();
     authState.user = null;
     authState.loading = false;
     authState.isAuthenticated = false;
@@ -97,11 +99,23 @@ describe("Home venture workspace", () => {
   });
 
   it("requires a field before generation", () => {
+  render(<Home />);
+  fireEvent.change(screen.getByPlaceholderText("Describe a startup idea..."), { target: { value: "A useful startup idea for healthcare teams" } });
+  fireEvent.click(screen.getByRole("button", { name: /generate/i }));
+  expect(screen.getByRole("alert")).toHaveTextContent("Select an interest field before generating a startup blueprint.");
+  expect(generateMutate).not.toHaveBeenCalled();
+});
+
+  it("enables and loads dependent topics after a field is selected", () => {
     render(<Home />);
-    fireEvent.change(screen.getByPlaceholderText("Describe a startup idea..."), { target: { value: "A useful startup idea for healthcare teams" } });
-    fireEvent.click(screen.getByRole("button", { name: /generate/i }));
-    expect(screen.getByRole("alert")).toHaveTextContent("Select an interest field before generating a startup blueprint.");
-    expect(generateMutate).not.toHaveBeenCalled();
+    const [fieldSelector, topicSelector] = screen.getAllByRole("combobox");
+
+    expect(topicSelector).toBeDisabled();
+    fireEvent.change(fieldSelector, { target: { value: "1" } });
+
+    expect(topicSelector).toBeEnabled();
+    expect(screen.getByRole("option", { name: "Telemedicine" })).toBeInTheDocument();
+    expect(topicUseQuery).toHaveBeenLastCalledWith({ fieldId: 1 }, expect.objectContaining({ enabled: true }));
   });
 
   it("shows the exact loading message while a blueprint is generating", () => {

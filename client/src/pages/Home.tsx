@@ -26,7 +26,7 @@ import {
   Target,
   UsersRound,
 } from "lucide-react";
-import React, { FormEvent, useEffect, useState } from "react";
+import React, { FormEvent, useEffect, useMemo, useState } from "react";
 
 type StartupBlueprint = {
   startupName: string;
@@ -79,7 +79,8 @@ export default function Home() {
 
   const { user, loading: isAuthLoading, isAuthenticated, logout } = useAuth();
   const fields = trpc.taxonomy.fields.useQuery(undefined, { staleTime: 60_000 });
-  const topics = trpc.taxonomy.topics.useQuery({ fieldId: Number(fieldId) }, { enabled: Boolean(fieldId), staleTime: 60_000 });
+  const topicQueryInput = useMemo(() => ({ fieldId: Number(fieldId) }), [fieldId]);
+  const topics = trpc.taxonomy.topics.useQuery(topicQueryInput, { enabled: Boolean(fieldId), staleTime: 60_000, retry: 1 });
   const savedStartups = trpc.blueprint.list.useQuery(undefined, { enabled: isAuthenticated, retry: false, refetchOnWindowFocus: false });
   const workspace = trpc.workspace.get.useQuery({ savedBlueprintId: activeStartupId ?? 0 }, { enabled: Boolean(activeStartupId), refetchOnWindowFocus: false });
 
@@ -116,7 +117,7 @@ export default function Home() {
   const selectedField = fields.data?.find(field => field.id === Number(fieldId));
   const selectedTopic = topics.data?.find(topic => topic.id === Number(topicId));
   const saveStatus = saveBlueprint.isPending ? "Saving" : saveBlueprint.isSuccess ? "Saved" : saveBlueprint.isError ? "Save failed" : null;
-  const errorMessage = inputError ?? generateBlueprint.error?.message ?? saveBlueprint.error?.message ?? savedStartups.error?.message ?? workspace.error?.message;
+  const errorMessage = inputError ?? generateBlueprint.error?.message ?? saveBlueprint.error?.message ?? savedStartups.error?.message ?? workspace.error?.message ?? (fieldId ? topics.error?.message : null);
 
   useEffect(() => {
     if (activeStartupId && !savedStartups.data?.some(startup => startup.id === activeStartupId)) {
@@ -227,7 +228,7 @@ export default function Home() {
                 {fields.data?.map(field => <option key={field.id} value={field.id}>{field.name}</option>)}
               </select>
               <select value={useOtherTopic ? "other" : topicId} onChange={event => { const isOther = event.target.value === "other"; setUseOtherTopic(isOther); setTopicId(isOther ? "" : event.target.value); }} disabled={!fieldId || topics.isLoading} className="h-10 rounded-xl border border-slate-200 bg-white px-3 text-xs font-semibold text-slate-600 outline-none focus:border-blue-300 focus:ring-2 focus:ring-blue-100">
-                <option value="">Choose topic</option>
+                <option value="">{!fieldId ? "Choose a field first" : topics.isLoading ? "Loading topics..." : topics.isError ? "Topics could not load" : "Choose topic"}</option>
                 {topics.data?.map(topic => <option key={topic.id} value={topic.id}>{topic.name}</option>)}
                 <option value="other">Other</option>
               </select>

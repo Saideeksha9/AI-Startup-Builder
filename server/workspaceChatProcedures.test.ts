@@ -198,6 +198,30 @@ describe("venture workspace and chat procedures", () => {
     expect(result.linkedRecordType).toBe("risk");
   });
 
+  it("parses plain text JSON with omitted optional action properties", async () => {
+    vi.mocked(getOrCreateConversation).mockResolvedValue({ id: 7, userId: 42, activeStartupId: 12, createdAt: new Date() } as never);
+    vi.mocked(listConversationMessages).mockResolvedValue([] as never);
+    vi.mocked(invokeLLM).mockResolvedValue({
+      choices: [{ message: { content: "```json\n{\"reply\":\"Start with customer discovery.\",\"persist\":false,\"action\":{}}\n```" } }],
+    } as never);
+
+    await expect(caller(chatRouter).send({ activeStartupId: 12, message: "What should I do first?" })).resolves.toMatchObject({
+      reply: "Start with customer discovery.",
+      linkedRecordType: null,
+    });
+  });
+
+  it("converts a provider response without choices into a safe advisor error", async () => {
+    vi.mocked(getOrCreateConversation).mockResolvedValue({ id: 7, userId: 42, activeStartupId: 12, createdAt: new Date() } as never);
+    vi.mocked(listConversationMessages).mockResolvedValue([] as never);
+    vi.mocked(invokeLLM).mockResolvedValue({ error: { message: "JSON mode is unavailable" } } as never);
+
+    await expect(caller(chatRouter).send({ activeStartupId: 12, message: "Help with the roadmap." })).rejects.toMatchObject({
+      code: "INTERNAL_SERVER_ERROR",
+      message: "The venture advisor could not respond. Please try again.",
+    });
+  });
+
   it("persists a confirmed update to an existing risk in the active startup", async () => {
     vi.mocked(getOrCreateConversation).mockResolvedValue({ id: 7, userId: 42, activeStartupId: 12, createdAt: new Date() } as never);
     vi.mocked(listConversationMessages).mockResolvedValue(proposedUpdate("risk", 88) as never);

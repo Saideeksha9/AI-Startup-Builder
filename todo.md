@@ -31,3 +31,7 @@
 - [x] Enforce server-side confirmation before chatbot updates any existing advisory record.
 - [x] Test confirmed chatbot updates and ownership checks across milestone, investment, risk, and crisis records.
 - [x] Add direct unauthorized-access tests for milestone, investment scenario, and crisis plan mutations.
+- [x] Diagnose and repair the venture advisor response failure.
+- [x] Diagnose and repair dependent interest-topic loading and selection.
+- [x] Add regression tests for advisor responses and field-to-topic selection.
+- [x] Add advisor regression tests for plain JSON text completions and missing provider choices.
