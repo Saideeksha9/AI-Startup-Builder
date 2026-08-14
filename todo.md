@@ -53,3 +53,10 @@
 - [x] Test automatic venture planning, detailed advisor output, and landing-page interactions.
 - [x] Require non-empty proactive recommendations for newly generated startup blueprints.
 - [x] Test populated generated workspace recommendations and rendered detailed advisor replies.
+- [x] Diagnose and repair the failed save path while requiring an explicit Save action.
+- [x] Add a user-owned venture notes table and migration for text, topic, and reference link data.
+- [x] Implement protected venture note create, list, and delete procedures.
+- [x] Add manual save controls and a private notes section to each venture workspace.
+- [x] Test explicit saving, private note ownership, and reference link handling.
+- [x] Update saved-venture messaging to state that users choose when to save.
+- [x] Add unauthorized-access tests for private venture note creation, retrieval, and deletion.

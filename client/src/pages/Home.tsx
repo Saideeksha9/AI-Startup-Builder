@@ -6,6 +6,7 @@ import { startLogin } from "@/const";
 import { trpc } from "@/lib/trpc";
 import {
   ArrowRight,
+  BookOpen,
   Bookmark,
   Check,
   CheckCircle2,
@@ -25,6 +26,7 @@ import {
   Siren,
   Sparkles,
   Target,
+  Trash2,
   UsersRound,
 } from "lucide-react";
 import React, { FormEvent, useEffect, useMemo, useState } from "react";
@@ -71,6 +73,7 @@ export default function Home() {
   const [useOtherTopic, setUseOtherTopic] = useState(false);
   const [otherTopic, setOtherTopic] = useState("");
   const [inputError, setInputError] = useState<string | null>(null);
+  const [pendingSaveDetails, setPendingSaveDetails] = useState<{ idea: string; interestTopicId: number | null; interestOtherText: string | null } | null>(null);
   const [selectedSavedStartup, setSelectedSavedStartup] = useState<SavedStartup | null>(null);
   const [activeStartupId, setActiveStartupId] = useState<number | null>(null);
   const [milestoneTitle, setMilestoneTitle] = useState("");
@@ -84,6 +87,10 @@ export default function Home() {
   const [crisisTitle, setCrisisTitle] = useState("");
   const [crisisTrigger, setCrisisTrigger] = useState("");
   const [crisisOwner, setCrisisOwner] = useState("");
+  const [noteTitle, setNoteTitle] = useState("");
+  const [noteTopic, setNoteTopic] = useState("");
+  const [noteContent, setNoteContent] = useState("");
+  const [noteReferenceUrl, setNoteReferenceUrl] = useState("");
 
   const { user, loading: isAuthLoading, isAuthenticated, logout } = useAuth();
   const fields = trpc.taxonomy.fields.useQuery(undefined, { staleTime: 60_000 });
@@ -95,21 +102,11 @@ export default function Home() {
   const saveBlueprint = trpc.blueprint.save.useMutation({
     onSuccess: result => {
       setActiveStartupId(result.id);
+      setPendingSaveDetails(null);
       void savedStartups.refetch();
     },
   });
-  const generateBlueprint = trpc.blueprint.generate.useMutation({
-    onSuccess: (generatedBlueprint, variables) => {
-      if (isAuthenticated) {
-        saveBlueprint.mutate({
-          idea: variables.idea,
-          blueprint: generatedBlueprint,
-          interestTopicId: useOtherTopic ? null : (topicId ? Number(topicId) : null),
-          interestOtherText: useOtherTopic ? otherTopic.trim() : null,
-        });
-      }
-    },
-  });
+  const generateBlueprint = trpc.blueprint.generate.useMutation();
   const addMilestone = trpc.workspace.addMilestone.useMutation({ onSuccess: () => { setMilestoneTitle(""); setMilestoneDate(""); void workspace.refetch(); } });
   const updateMilestone = trpc.workspace.updateMilestoneStatus.useMutation({ onSuccess: () => void workspace.refetch() });
   const addScenario = trpc.workspace.addInvestmentScenario.useMutation({ onSuccess: () => { setScenarioName(""); setScenarioFunding(""); setScenarioValuation(""); setScenarioRunway(""); void workspace.refetch(); } });
@@ -119,6 +116,8 @@ export default function Home() {
   const deleteScenario = trpc.workspace.deleteInvestmentScenario.useMutation({ onSuccess: () => void workspace.refetch() });
   const deleteRisk = trpc.workspace.deleteRisk.useMutation({ onSuccess: () => void workspace.refetch() });
   const deleteCrisisPlan = trpc.workspace.deleteCrisisPlan.useMutation({ onSuccess: () => void workspace.refetch() });
+  const addNote = trpc.workspace.addNote.useMutation({ onSuccess: () => { setNoteTitle(""); setNoteTopic(""); setNoteContent(""); setNoteReferenceUrl(""); void workspace.refetch(); } });
+  const deleteNote = trpc.workspace.deleteNote.useMutation({ onSuccess: () => void workspace.refetch() });
 
   const isLoading = generateBlueprint.isPending;
   const blueprint = selectedSavedStartup?.blueprint ?? generateBlueprint.data;
@@ -158,6 +157,11 @@ export default function Home() {
     setInputError(null);
     setSelectedSavedStartup(null);
     setActiveStartupId(null);
+    setPendingSaveDetails({
+      idea: trimmedIdea,
+      interestTopicId: useOtherTopic ? null : (topicId ? Number(topicId) : null),
+      interestOtherText: useOtherTopic ? otherTopic.trim() : null,
+    });
     generateBlueprint.mutate({
       idea: trimmedIdea,
       interestField: selectedField?.name ?? null,
@@ -172,6 +176,12 @@ export default function Home() {
     setInputError(null);
     setSelectedSavedStartup(startup);
     setActiveStartupId(startup.id);
+    setPendingSaveDetails(null);
+  }
+
+  function saveCurrentBlueprint() {
+    if (!generateBlueprint.data || !pendingSaveDetails || saveBlueprint.isPending) return;
+    saveBlueprint.mutate({ ...pendingSaveDetails, blueprint: generateBlueprint.data });
   }
 
   function openLandingPagePreview() {
@@ -202,6 +212,12 @@ export default function Home() {
     event.preventDefault();
     if (!activeStartupId || crisisTitle.trim().length < 3) return;
     addCrisisPlan.mutate({ savedBlueprintId: activeStartupId, title: crisisTitle.trim(), riskId: null, triggerConditions: crisisTrigger.trim() || null, responseSteps: null, owner: crisisOwner.trim() || null });
+  }
+
+  function addWorkspaceNote(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!activeStartupId || !noteTitle.trim() || !noteContent.trim()) return;
+    addNote.mutate({ savedBlueprintId: activeStartupId, title: noteTitle.trim(), topic: noteTopic.trim() || null, content: noteContent.trim(), referenceUrl: noteReferenceUrl.trim() || null });
   }
 
   return (
@@ -256,7 +272,7 @@ export default function Home() {
 
         {isAuthenticated ? (
           <section aria-label="Saved blueprints" className="mx-auto mt-7 max-w-4xl rounded-3xl border border-slate-200 bg-white/70 p-4 shadow-sm backdrop-blur-sm sm:p-5">
-            <div className="flex items-center gap-3"><span className="flex h-9 w-9 items-center justify-center rounded-xl bg-blue-50 text-blue-600"><Bookmark className="h-4 w-4" aria-hidden="true" /></span><div><h2 className="text-sm font-black tracking-[-0.015em] text-black">Saved ventures</h2><p className="text-xs font-light text-slate-500">New generations are saved automatically and open a private workspace.</p></div></div>
+            <div className="flex items-center gap-3"><span className="flex h-9 w-9 items-center justify-center rounded-xl bg-blue-50 text-blue-600"><Bookmark className="h-4 w-4" aria-hidden="true" /></span><div><h2 className="text-sm font-black tracking-[-0.015em] text-black">Saved ventures</h2><p className="text-xs font-light text-slate-500">Save a generated blueprint when you are ready, then open its private workspace.</p></div></div>
             {savedStartups.isLoading ? <div className="mt-4 flex items-center gap-2 text-xs text-slate-500"><LoaderCircle className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />Loading saved ventures...</div> : savedStartups.data?.length ? <div className="mt-4 flex gap-2 overflow-x-auto pb-1">{savedStartups.data.map(startup => <button key={startup.id} type="button" onClick={() => openSavedStartup(startup as SavedStartup)} className={activeStartupId === startup.id ? "min-w-52 rounded-2xl border border-blue-300 bg-blue-50 px-4 py-3 text-left" : "min-w-52 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-left transition hover:border-blue-200 hover:bg-blue-50/60"}><p className="truncate text-sm font-bold text-slate-800">{startup.blueprint.startupName}</p><div className="mt-1 flex items-center gap-1.5 text-[11px] text-slate-500"><Clock3 className="h-3 w-3" aria-hidden="true" />{new Date(startup.createdAt).toLocaleDateString()}</div></button>)}</div> : <p className="mt-4 text-xs text-slate-500">Your saved startup blueprints will appear here.</p>}
           </section>
         ) : null}
@@ -265,7 +281,7 @@ export default function Home() {
           <section className="mx-auto mt-16 flex max-w-md flex-col items-center rounded-3xl border border-slate-200 bg-white/80 px-8 py-14 text-center shadow-sm backdrop-blur-sm"><LoaderCircle className="h-7 w-7 animate-spin text-blue-600" aria-hidden="true" /><p className="mt-4 text-lg font-semibold tracking-tight text-black">Strategizing...</p></section>
         ) : blueprint ? (
           <section className="mt-12 space-y-6" aria-live="polite">
-            <article className="overflow-hidden rounded-[2rem] bg-gradient-to-br from-blue-600 to-indigo-600 p-7 text-white shadow-[0_20px_45px_rgba(37,99,235,0.22)] sm:p-10"><div className="flex flex-col justify-between gap-8 sm:flex-row sm:items-end"><div><div className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-3 py-1.5 text-[11px] font-bold uppercase tracking-[0.18em] text-blue-50"><Sparkles className="h-3.5 w-3.5" aria-hidden="true" />Startup blueprint</div><h2 className="mt-5 text-3xl font-black tracking-[-0.045em] sm:text-5xl">{blueprint.startupName}</h2><p className="mt-3 max-w-2xl text-base font-light leading-7 text-blue-50 sm:text-lg">{blueprint.tagline}</p></div><div className="flex items-center gap-3">{isAuthenticated && saveStatus ? <span className="inline-flex items-center gap-1.5 rounded-full border border-white/20 bg-white/10 px-3 py-1.5 text-xs font-semibold text-blue-50">{saveBlueprint.isPending ? <LoaderCircle className="h-3.5 w-3.5 animate-spin" aria-hidden="true" /> : <CheckCircle2 className="h-3.5 w-3.5" aria-hidden="true" />}{saveStatus}</span> : !isAuthenticated ? <button type="button" onClick={startLogin} className="rounded-full border border-white/20 bg-white/10 px-3 py-1.5 text-xs font-semibold text-blue-50 transition hover:bg-white/20">Sign in to save</button> : null}<Rocket className="h-10 w-10 text-blue-100/90" aria-hidden="true" /></div></div></article>
+            <article className="overflow-hidden rounded-[2rem] bg-gradient-to-br from-blue-600 to-indigo-600 p-7 text-white shadow-[0_20px_45px_rgba(37,99,235,0.22)] sm:p-10"><div className="flex flex-col justify-between gap-8 sm:flex-row sm:items-end"><div><div className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-3 py-1.5 text-[11px] font-bold uppercase tracking-[0.18em] text-blue-50"><Sparkles className="h-3.5 w-3.5" aria-hidden="true" />Startup blueprint</div><h2 className="mt-5 text-3xl font-black tracking-[-0.045em] sm:text-5xl">{blueprint.startupName}</h2><p className="mt-3 max-w-2xl text-base font-light leading-7 text-blue-50 sm:text-lg">{blueprint.tagline}</p></div><div className="flex items-center gap-3">{isAuthenticated && pendingSaveDetails ? <Button type="button" onClick={saveCurrentBlueprint} disabled={saveBlueprint.isPending} className="rounded-full bg-white px-4 text-xs font-bold text-blue-700 hover:bg-blue-50">{saveBlueprint.isPending ? <LoaderCircle className="h-3.5 w-3.5 animate-spin" aria-hidden="true" /> : <Bookmark className="h-3.5 w-3.5" aria-hidden="true" />}{saveBlueprint.isPending ? "Saving" : "Save to list"}</Button> : isAuthenticated && saveStatus === "Saved" ? <span className="inline-flex items-center gap-1.5 rounded-full border border-white/20 bg-white/10 px-3 py-1.5 text-xs font-semibold text-blue-50"><CheckCircle2 className="h-3.5 w-3.5" aria-hidden="true" />Saved</span> : !isAuthenticated ? <button type="button" onClick={startLogin} className="rounded-full border border-white/20 bg-white/10 px-3 py-1.5 text-xs font-semibold text-blue-50 transition hover:bg-white/20">Sign in to save</button> : null}<Rocket className="h-10 w-10 text-blue-100/90" aria-hidden="true" /></div></div></article>
 
             <div className="grid gap-6 lg:grid-cols-2">
               <article className="rounded-[2rem] border border-slate-200 bg-white p-7 shadow-sm sm:p-8"><div className="flex items-center gap-3"><span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-blue-50 text-blue-600"><Target className="h-5 w-5" aria-hidden="true" /></span><div><h2 className="text-xl font-black tracking-[-0.025em] text-black">Business Strategy</h2><p className="mt-0.5 text-sm font-light text-slate-500">Audience, model, and landscape.</p></div></div><div className="mt-8"><p className="text-[11px] font-bold uppercase tracking-[0.17em] text-slate-400">Target audience</p><p className="mt-2 text-sm leading-6 text-slate-700">{blueprint.targetAudience}</p></div><div className="mt-7"><p className="text-[11px] font-bold uppercase tracking-[0.17em] text-slate-400">Business model</p><ul className="mt-3 space-y-3">{blueprint.businessModel.map(item => <li key={item} className="flex gap-3 text-sm leading-6 text-slate-700"><span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-emerald-50 text-emerald-600"><Check className="h-3.5 w-3.5" strokeWidth={3} aria-hidden="true" /></span>{item}</li>)}</ul></div><div className="mt-7"><div className="flex items-center gap-2"><UsersRound className="h-4 w-4 text-slate-500" aria-hidden="true" /><p className="text-[11px] font-bold uppercase tracking-[0.17em] text-slate-400">Competitors</p></div><div className="mt-3 flex flex-wrap gap-2">{blueprint.competitors.map(competitor => <span key={competitor} className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-semibold text-slate-600">{competitor}</span>)}</div></div></article>
@@ -282,6 +298,8 @@ export default function Home() {
                 <article className="rounded-2xl border border-slate-200 bg-slate-50 p-5"><div className="flex items-center gap-2"><Landmark className="h-4 w-4 text-emerald-600" aria-hidden="true" /><h3 className="font-black text-slate-900">Investment scenarios</h3></div><div className="mt-4 space-y-3">{workspace.data?.scenarios.map(scenario => <div key={scenario.id} className="rounded-xl bg-white p-3"><p className="text-sm font-semibold text-slate-800">{scenario.name}</p><p className="mt-1 text-xs text-slate-500">Funding {scenario.fundingAmount ?? "—"} · Valuation {scenario.valuation ?? "—"} · Runway {scenario.runwayMonths ?? "—"} months</p></div>)}{!workspace.data?.scenarios.length ? <p className="text-xs text-slate-500">No funding scenarios yet.</p> : null}</div><form onSubmit={addWorkspaceScenario} className="mt-4 grid gap-2 sm:grid-cols-2"><input value={scenarioName} onChange={event => setScenarioName(event.target.value)} placeholder="Scenario name" className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs outline-none" /><CurrencyInput value={scenarioFunding} onChange={setScenarioFunding} placeholder="Funding amount" /><CurrencyInput value={scenarioValuation} onChange={setScenarioValuation} placeholder="Valuation" /><input value={scenarioRunway} onChange={event => setScenarioRunway(event.target.value.replace(/[^0-9]/g, ""))} inputMode="numeric" placeholder="Runway (months)" className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs outline-none" /><Button type="submit" disabled={addScenario.isPending} className="col-span-full rounded-xl bg-slate-950 text-xs text-white"><Plus className="h-3.5 w-3.5" aria-hidden="true" />Add funding scenario</Button></form></article>
                 <article className="rounded-2xl border border-slate-200 bg-slate-50 p-5"><div className="flex items-center gap-2"><ShieldAlert className="h-4 w-4 text-rose-600" aria-hidden="true" /><h3 className="font-black text-slate-900">Risk register</h3></div><div className="mt-4 space-y-3">{workspace.data?.riskRegister.map(risk => <div key={risk.id} className="rounded-xl bg-white p-3"><div className="flex items-center justify-between gap-2"><p className="text-sm font-semibold text-slate-800">{risk.title}</p><span className="rounded-full bg-rose-50 px-2 py-1 text-[10px] font-bold uppercase text-rose-700">{risk.severity}</span></div><p className="mt-1 text-xs text-slate-500">Likelihood: {risk.likelihood}</p>{risk.mitigationNotes ? <p className="mt-2 text-xs leading-5 text-slate-600">{risk.mitigationNotes}</p> : null}</div>)}{!workspace.data?.riskRegister.length ? <p className="text-xs text-slate-500">No risks logged yet.</p> : null}</div><form onSubmit={addWorkspaceRisk} className="mt-4 grid gap-2"><input value={riskTitle} onChange={event => setRiskTitle(event.target.value)} placeholder="Risk title" className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs outline-none" /><input value={riskMitigation} onChange={event => setRiskMitigation(event.target.value)} placeholder="Mitigation note (optional)" className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs outline-none" /><Button type="submit" disabled={addRisk.isPending} className="rounded-xl bg-slate-950 text-xs text-white"><Plus className="h-3.5 w-3.5" aria-hidden="true" />Add risk</Button></form></article>
                 <article className="rounded-2xl border border-slate-200 bg-slate-50 p-5"><div className="flex items-center gap-2"><Siren className="h-4 w-4 text-amber-600" aria-hidden="true" /><h3 className="font-black text-slate-900">Crisis plans</h3></div><div className="mt-4 space-y-3">{workspace.data?.crisisResponsePlans.map(plan => <div key={plan.id} className="rounded-xl bg-white p-3"><p className="text-sm font-semibold text-slate-800">{plan.title}</p>{plan.triggerConditions ? <p className="mt-1 text-xs leading-5 text-slate-500">Trigger: {plan.triggerConditions}</p> : null}<p className="mt-1 text-[11px] text-slate-500">Owner: {plan.owner ?? "Unassigned"}</p></div>)}{!workspace.data?.crisisResponsePlans.length ? <p className="text-xs text-slate-500">No crisis plans yet.</p> : null}</div><form onSubmit={addWorkspaceCrisisPlan} className="mt-4 grid gap-2"><input value={crisisTitle} onChange={event => setCrisisTitle(event.target.value)} placeholder="Crisis plan title" className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs outline-none" /><input value={crisisTrigger} onChange={event => setCrisisTrigger(event.target.value)} placeholder="Trigger condition" className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs outline-none" /><input value={crisisOwner} onChange={event => setCrisisOwner(event.target.value)} placeholder="Owner" className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs outline-none" /><Button type="submit" disabled={addCrisisPlan.isPending} className="rounded-xl bg-slate-950 text-xs text-white"><Plus className="h-3.5 w-3.5" aria-hidden="true" />Add crisis plan</Button></form></article>
+                <article className="rounded-2xl border border-slate-200 bg-slate-50 p-5"><div className="flex items-center gap-2"><Siren className="h-4 w-4 text-amber-600" aria-hidden="true" /><h3 className="font-black text-slate-900">Crisis plans</h3></div><div className="mt-4 space-y-3">{workspace.data?.crisisResponsePlans.map(plan => <div key={plan.id} className="rounded-xl bg-white p-3"><p className="text-sm font-semibold text-slate-800">{plan.title}</p>{plan.triggerConditions ? <p className="mt-1 text-xs leading-5 text-slate-500">Trigger: {plan.triggerConditions}</p> : null}<p className="mt-1 text-[11px] text-slate-500">Owner: {plan.owner ?? "Unassigned"}</p></div>)}{!workspace.data?.crisisResponsePlans.length ? <p className="text-xs text-slate-500">No crisis plans yet.</p> : null}</div><form onSubmit={addWorkspaceCrisisPlan} className="mt-4 grid gap-2"><input value={crisisTitle} onChange={event => setCrisisTitle(event.target.value)} placeholder="Crisis plan title" className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs outline-none" /><input value={crisisTrigger} onChange={event => setCrisisTrigger(event.target.value)} placeholder="Trigger condition" className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs outline-none" /><input value={crisisOwner} onChange={event => setCrisisOwner(event.target.value)} placeholder="Owner" className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs outline-none" /><Button type="submit" disabled={addCrisisPlan.isPending} className="rounded-xl bg-slate-950 text-xs text-white"><Plus className="h-3.5 w-3.5" aria-hidden="true" />Add crisis plan</Button></form></article>
+                <article className="rounded-2xl border border-slate-200 bg-slate-50 p-5 lg:col-span-2"><div className="flex items-center gap-2"><BookOpen className="h-4 w-4 text-indigo-600" aria-hidden="true" /><h3 className="font-black text-slate-900">Venture notes</h3></div><p className="mt-1 text-xs text-slate-500">Save related research, decisions, topics, and source links privately with this startup.</p><div className="mt-4 space-y-3">{workspace.data?.notes?.map(note => <div key={note.id} className="rounded-xl bg-white p-3"><div className="flex items-start justify-between gap-3"><div><p className="text-sm font-semibold text-slate-800">{note.title}</p>{note.topic ? <p className="mt-1 text-[11px] font-bold uppercase tracking-wide text-indigo-600">{note.topic}</p> : null}</div><Button type="button" variant="ghost" size="icon" onClick={() => deleteNote.mutate({ savedBlueprintId: activeStartupId, id: note.id })} aria-label={`Delete note ${note.title}`} className="h-7 w-7 text-slate-400 hover:bg-rose-50 hover:text-rose-600"><Trash2 className="h-3.5 w-3.5" aria-hidden="true" /></Button></div><p className="mt-2 whitespace-pre-wrap text-xs leading-5 text-slate-600">{note.content}</p>{note.referenceUrl ? <a href={note.referenceUrl} target="_blank" rel="noreferrer" className="mt-2 inline-flex items-center gap-1 text-xs font-semibold text-blue-600 hover:underline"><ExternalLink className="h-3 w-3" aria-hidden="true" />Open reference</a> : null}</div>)}{!workspace.data?.notes?.length ? <p className="text-xs text-slate-500">No notes yet. Capture key research and decisions here.</p> : null}</div><form onSubmit={addWorkspaceNote} className="mt-4 grid gap-2"><div className="grid gap-2 sm:grid-cols-2"><input value={noteTitle} onChange={event => setNoteTitle(event.target.value)} placeholder="Note title" className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs outline-none" /><input value={noteTopic} onChange={event => setNoteTopic(event.target.value)} placeholder="Topic (optional)" className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs outline-none" /></div><textarea value={noteContent} onChange={event => setNoteContent(event.target.value)} placeholder="Write related research, a decision, or an action to revisit..." className="min-h-24 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs outline-none" /><input value={noteReferenceUrl} onChange={event => setNoteReferenceUrl(event.target.value)} type="url" placeholder="Reference link (https://..., optional)" className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs outline-none" /><Button type="submit" disabled={addNote.isPending} className="rounded-xl bg-slate-950 text-xs text-white"><Plus className="h-3.5 w-3.5" aria-hidden="true" />Save note</Button></form></article>
               </div>}
               {workspace.data ? <VentureWorkspaceViews
                 data={workspace.data}

@@ -5,10 +5,12 @@ import {
   createInvestmentScenario,
   createMilestone,
   createRisk,
+  createVentureNote,
   deleteCrisisPlan,
   deleteInvestmentScenario,
   deleteMilestone,
   deleteRisk,
+  deleteVentureNote,
   getVentureWorkspace,
   updateCrisisPlan,
   updateInvestmentScenario,
@@ -84,6 +86,15 @@ export const workspaceRouter = router({
     await workspaceOrThrow(ctx.user.id, input.savedBlueprintId);
     return { id: await createCrisisPlan({ ...input, userId: ctx.user.id }) };
   }),
+  addNote: protectedProcedure.input(ventureIdSchema.extend({
+    title: z.string().trim().min(1).max(200),
+    topic: z.string().trim().max(160).nullable().optional(),
+    content: z.string().trim().min(1).max(20_000),
+    referenceUrl: z.string().trim().url().max(2048).nullable().optional(),
+  })).mutation(async ({ ctx, input }) => {
+    await workspaceOrThrow(ctx.user.id, input.savedBlueprintId);
+    return { id: await createVentureNote({ ...input, userId: ctx.user.id }) };
+  }),
   updateMilestone: protectedProcedure.input(recordIdSchema.extend({
     title: z.string().trim().min(3).max(240).optional(),
     targetDate: z.string().date().nullable().optional(),
@@ -97,6 +108,11 @@ export const workspaceRouter = router({
   deleteMilestone: protectedProcedure.input(recordIdSchema).mutation(async ({ ctx, input }) => {
     await workspaceOrThrow(ctx.user.id, input.savedBlueprintId);
     await deleteMilestone(ctx.user.id, input.savedBlueprintId, input.id);
+    return { success: true };
+  }),
+  deleteNote: protectedProcedure.input(recordIdSchema).mutation(async ({ ctx, input }) => {
+    await workspaceOrThrow(ctx.user.id, input.savedBlueprintId);
+    await deleteVentureNote(ctx.user.id, input.savedBlueprintId, input.id);
     return { success: true };
   }),
   updateInvestmentScenario: protectedProcedure.input(recordIdSchema.extend({

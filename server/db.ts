@@ -13,6 +13,7 @@ import {
   risks,
   savedBlueprints,
   users,
+  ventureNotes,
 } from "../drizzle/schema";
 import { ENV } from "./_core/env";
 
@@ -182,7 +183,11 @@ export async function createInvestmentScenario(input: {
   version?: number;
 }) {
   const db = await databaseOrThrow();
-  const result = await db.insert(investmentScenarios).values(input);
+  const result = await db.insert(investmentScenarios).values({
+    ...input,
+    fundingAmount: normalizeMoney(input.fundingAmount),
+    valuation: normalizeMoney(input.valuation),
+  });
   return Number(result[0].insertId);
 }
 
@@ -213,19 +218,45 @@ export async function createCrisisPlan(input: {
   return Number(result[0].insertId);
 }
 
+export async function createVentureNote(input: {
+  userId: number;
+  savedBlueprintId: number;
+  title: string;
+  topic?: string | null;
+  content: string;
+  referenceUrl?: string | null;
+}) {
+  const db = await databaseOrThrow();
+  const result = await db.insert(ventureNotes).values(input);
+  return Number(result[0].insertId);
+}
+
+export async function deleteVentureNote(userId: number, savedBlueprintId: number, id: number) {
+  const db = await databaseOrThrow();
+  await db.delete(ventureNotes).where(and(eq(ventureNotes.id, id), eq(ventureNotes.userId, userId), eq(ventureNotes.savedBlueprintId, savedBlueprintId)));
+}
+
 export async function getVentureWorkspace(userId: number, savedBlueprintId: number) {
   const db = await databaseOrThrow();
   const startup = await getSavedBlueprint(userId, savedBlueprintId);
   if (!startup) return undefined;
 
-  const [roadmap, scenarios, riskRegister, crisisResponsePlans] = await Promise.all([
+  const [roadmap, scenarios, riskRegister, crisisResponsePlans, notes] = await Promise.all([
     db.select().from(milestones).where(and(eq(milestones.userId, userId), eq(milestones.savedBlueprintId, savedBlueprintId))).orderBy(milestones.targetDate),
     db.select().from(investmentScenarios).where(and(eq(investmentScenarios.userId, userId), eq(investmentScenarios.savedBlueprintId, savedBlueprintId))).orderBy(desc(investmentScenarios.createdAt)),
     db.select().from(risks).where(and(eq(risks.userId, userId), eq(risks.savedBlueprintId, savedBlueprintId))).orderBy(desc(risks.createdAt)),
     db.select().from(crisisPlans).where(and(eq(crisisPlans.userId, userId), eq(crisisPlans.savedBlueprintId, savedBlueprintId))).orderBy(desc(crisisPlans.createdAt)),
+    db.select().from(ventureNotes).where(and(eq(ventureNotes.userId, userId), eq(ventureNotes.savedBlueprintId, savedBlueprintId))).orderBy(desc(ventureNotes.createdAt)),
   ]);
 
-  return { startup, roadmap, scenarios, riskRegister, crisisResponsePlans };
+  return { startup, roadmap, scenarios, riskRegister, crisisResponsePlans, notes };
+}
+
+function normalizeMoney(value: string | null | undefined) {
+  if (value === undefined) return undefined;
+  if (value === null) return null;
+  const normalized = value.replace(/[$,\s]/g, "");
+  return /^\d+(\.\d{1,2})?$/.test(normalized) ? normalized : null;
 }
 
 export async function getPortfolioContext(userId: number) {
@@ -311,8 +342,8 @@ export async function updateInvestmentScenario(input: {
   const db = await databaseOrThrow();
   await db.update(investmentScenarios).set({
     name: input.name,
-    fundingAmount: input.fundingAmount,
-    valuation: input.valuation,
+    fundingAmount: input.fundingAmount === undefined ? undefined : normalizeMoney(input.fundingAmount),
+    valuation: input.valuation === undefined ? undefined : normalizeMoney(input.valuation),
     runwayMonths: input.runwayMonths,
     useOfFunds: input.useOfFunds,
   }).where(and(eq(investmentScenarios.id, input.id), eq(investmentScenarios.userId, input.userId), eq(investmentScenarios.savedBlueprintId, input.savedBlueprintId)));

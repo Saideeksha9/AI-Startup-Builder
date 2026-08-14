@@ -62,7 +62,7 @@ const blueprint = {
     ],
     investmentScenarios: [
       { name: "Bootstrap pilot", fundingAmount: "0", valuation: "0", runwayMonths: 6, useOfFunds: "Founder time, targeted customer interviews, and pilot implementation." },
-      { name: "Pre-seed validation", fundingAmount: "500000", valuation: "4000000", runwayMonths: 18, useOfFunds: "Product engineering, customer onboarding, and targeted healthcare sales." },
+      { name: "Pre-seed validation", fundingAmount: "$500,000", valuation: "$4,000,000", runwayMonths: 18, useOfFunds: "Product engineering, customer onboarding, and targeted healthcare sales." },
     ],
     risks: [
       { title: "Clinic teams may not change established compliance habits", severity: "high", likelihood: "medium", mitigationNotes: "Start with one recurring workflow and quantify time saved during pilots." },
@@ -108,6 +108,11 @@ describe("blueprint persistence procedures", () => {
     });
     expect(createMilestone).toHaveBeenCalledTimes(4);
     expect(createInvestmentScenario).toHaveBeenCalledTimes(2);
+    expect(createInvestmentScenario).toHaveBeenCalledWith(expect.objectContaining({
+      name: "Pre-seed validation",
+      fundingAmount: "500000",
+      valuation: "4000000",
+    }));
     expect(createRisk).toHaveBeenCalledTimes(3);
     expect(createCrisisPlan).toHaveBeenCalledTimes(2);
   });

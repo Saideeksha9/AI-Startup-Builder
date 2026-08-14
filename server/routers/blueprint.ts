@@ -24,6 +24,12 @@ function targetDateFromOffset(offsetDays: number) {
   return target.toISOString().slice(0, 10);
 }
 
+function decimalPlanningValue(value: string) {
+  const normalized = value.replace(/[$,\s]/g, "");
+  if (!/^\d+(\.\d{1,2})?$/.test(normalized)) throw new Error("The AI returned an invalid planning amount.");
+  return normalized;
+}
+
 function hasProactiveRecommendations(blueprint: z.infer<typeof startupBlueprintSchema>) {
   const workspace = blueprint.ventureWorkspace;
   return workspace.detailedActionPlan.length > 0
@@ -113,8 +119,8 @@ Return only JSON that conforms exactly to the provided schema. In ventureWorkspa
           userId: ctx.user.id,
           savedBlueprintId: id,
           name: scenario.name,
-          fundingAmount: scenario.fundingAmount,
-          valuation: scenario.valuation,
+          fundingAmount: decimalPlanningValue(scenario.fundingAmount),
+          valuation: decimalPlanningValue(scenario.valuation),
           runwayMonths: scenario.runwayMonths,
           useOfFunds: scenario.useOfFunds,
         })),

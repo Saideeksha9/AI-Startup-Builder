@@ -193,3 +193,22 @@ export const chatMessages = mysqlTable(
   },
   table => [index("chatMessages_conversation_idx").on(table.conversationId), index("chatMessages_user_startup_idx").on(table.userId, table.savedBlueprintId)],
 );
+
+export const ventureNotes = mysqlTable(
+  "ventureNotes",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    userId: int("userId")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    savedBlueprintId: int("savedBlueprintId")
+      .notNull()
+      .references(() => savedBlueprints.id, { onDelete: "cascade" }),
+    title: varchar("title", { length: 200 }).notNull(),
+    topic: varchar("topic", { length: 160 }),
+    content: text("content").notNull(),
+    referenceUrl: varchar("referenceUrl", { length: 2048 }),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+  },
+  table => [index("ventureNotes_user_startup_idx").on(table.userId, table.savedBlueprintId)],
+);

@@ -7,7 +7,9 @@ vi.mock("./db", () => ({
   createInvestmentScenario: vi.fn(),
   createMilestone: vi.fn(),
   createRisk: vi.fn(),
+  createVentureNote: vi.fn(),
   deleteRisk: vi.fn(),
+  deleteVentureNote: vi.fn(),
   getOrCreateConversation: vi.fn(),
   getPortfolioContext: vi.fn(),
   getVentureWorkspace: vi.fn(),
@@ -24,7 +26,9 @@ vi.mock("./_core/llm", () => ({ invokeLLM: vi.fn() }));
 import {
   createChatMessage,
   createRisk,
+  createVentureNote,
   deleteRisk,
+  deleteVentureNote,
   clearConversationMessages,
   getOrCreateConversation,
   getVentureWorkspace,
@@ -63,6 +67,7 @@ const workspace = {
   scenarios: [],
   riskRegister: [],
   crisisResponsePlans: [],
+  notes: [],
 };
 
 function updateAction(kind: "milestone" | "risk" | "investment_scenario" | "crisis_plan", recordId: number, fields: Record<string, unknown>) {
@@ -150,6 +155,48 @@ describe("venture workspace and chat procedures", () => {
     await expect(caller(workspaceRouter).deleteRisk({ savedBlueprintId: 12, id: 88 })).resolves.toEqual({ success: true });
 
     expect(deleteRisk).toHaveBeenCalledWith(42, 12, 88);
+  });
+
+  it("creates and deletes a private venture note with a validated reference link", async () => {
+    vi.mocked(createVentureNote).mockResolvedValue(91);
+
+    await expect(caller(workspaceRouter).addNote({
+      savedBlueprintId: 12,
+      title: "Pilot interview evidence",
+      topic: "Customer research",
+      content: "Capture the repeated pain points from the first clinic interviews.",
+      referenceUrl: "https://example.com/interview-notes",
+    })).resolves.toEqual({ id: 91 });
+
+    expect(createVentureNote).toHaveBeenCalledWith({
+      userId: 42,
+      savedBlueprintId: 12,
+      title: "Pilot interview evidence",
+      topic: "Customer research",
+      content: "Capture the repeated pain points from the first clinic interviews.",
+      referenceUrl: "https://example.com/interview-notes",
+    });
+
+    await expect(caller(workspaceRouter).deleteNote({ savedBlueprintId: 12, id: 91 })).resolves.toEqual({ success: true });
+    expect(deleteVentureNote).toHaveBeenCalledWith(42, 12, 91);
+  });
+
+  it("rejects venture note retrieval and mutations when the startup is not owned by the user", async () => {
+    vi.mocked(getVentureWorkspace).mockResolvedValue(undefined);
+    const unauthorized = caller(workspaceRouter, 99);
+
+    await expect(unauthorized.get({ savedBlueprintId: 12 })).rejects.toMatchObject({ code: "NOT_FOUND" });
+    await expect(unauthorized.addNote({
+      savedBlueprintId: 12,
+      title: "Private founder note",
+      topic: "Customer research",
+      content: "This record belongs only to the original startup owner.",
+      referenceUrl: "https://example.com/private-note",
+    })).rejects.toMatchObject({ code: "NOT_FOUND" });
+    await expect(unauthorized.deleteNote({ savedBlueprintId: 12, id: 91 })).rejects.toMatchObject({ code: "NOT_FOUND" });
+
+    expect(createVentureNote).not.toHaveBeenCalled();
+    expect(deleteVentureNote).not.toHaveBeenCalled();
   });
 
   it("rejects milestone, investment, and crisis mutations when the startup is not owned by the user", async () => {

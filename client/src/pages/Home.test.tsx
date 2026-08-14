@@ -10,6 +10,8 @@ const refetchSavedStartups = vi.fn();
 const refetchWorkspace = vi.fn();
 const topicUseQuery = vi.fn();
 const openWindow = vi.fn();
+const addNoteMutate = vi.fn();
+const deleteNoteMutate = vi.fn();
 
 const blueprint = {
   startupName: "CareLoop",
@@ -78,6 +80,8 @@ vi.mock("@/lib/trpc", () => ({
       deleteInvestmentScenario: { useMutation: () => ({ isPending: false, mutate: vi.fn() }) },
       deleteRisk: { useMutation: () => ({ isPending: false, mutate: vi.fn() }) },
       deleteCrisisPlan: { useMutation: () => ({ isPending: false, mutate: vi.fn() }) },
+      addNote: { useMutation: () => ({ isPending: false, mutate: addNoteMutate }) },
+      deleteNote: { useMutation: () => ({ isPending: false, mutate: deleteNoteMutate }) },
     },
   },
 }));
@@ -91,6 +95,8 @@ describe("Home venture workspace", () => {
     refetchWorkspace.mockClear();
     topicUseQuery.mockClear();
     openWindow.mockClear();
+    addNoteMutate.mockClear();
+    deleteNoteMutate.mockClear();
     Object.defineProperty(window, "open", { value: openWindow, writable: true });
     window.sessionStorage.clear();
     authState.user = null;
@@ -173,6 +179,27 @@ describe("Home venture workspace", () => {
     expect(window.sessionStorage.getItem("autonomous-ai-startup-landing-preview")).toContain("CareLoop");
   });
 
+  it("does not save a generated blueprint until the signed-in user presses Save to list", () => {
+    authState.user = { name: "Cherry 99" };
+    authState.isAuthenticated = true;
+    const rendered = render(<Home />);
+    const [fieldSelector, topicSelector] = screen.getAllByRole("combobox");
+
+    fireEvent.change(fieldSelector, { target: { value: "1" } });
+    fireEvent.change(topicSelector, { target: { value: "2" } });
+    fireEvent.change(screen.getByPlaceholderText("Describe a startup idea..."), { target: { value: "A useful startup idea for clinic compliance teams" } });
+    fireEvent.click(screen.getByRole("button", { name: /generate/i }));
+
+    expect(generateMutate).toHaveBeenCalledTimes(1);
+    expect(saveMutate).not.toHaveBeenCalled();
+
+    generateState.data = blueprint;
+    rendered.rerender(<Home />);
+    fireEvent.click(screen.getByRole("button", { name: "Save to list" }));
+
+    expect(saveMutate).toHaveBeenCalledWith(expect.objectContaining({ idea: "A useful startup idea for clinic compliance teams", blueprint, interestTopicId: 2 }));
+  });
+
   it("opens a signed-in saved venture with its workspace views and chat", () => {
     authState.user = { name: "Cherry 99" };
     authState.isAuthenticated = true;
@@ -184,7 +211,30 @@ describe("Home venture workspace", () => {
     expect(screen.getByText("Milestone roadmap")).toBeInTheDocument();
     expect(screen.getByText("Investment scenarios")).toBeInTheDocument();
     expect(screen.getByText("Risk register")).toBeInTheDocument();
-    expect(screen.getByText("Crisis plans")).toBeInTheDocument();
+    expect(screen.getAllByText("Crisis plans").length).toBeGreaterThan(0);
     expect(screen.getByTestId("venture-chat")).toBeInTheDocument();
+  });
+
+  it("creates a private venture note with an optional topic and reference link", () => {
+    authState.user = { name: "Cherry 99" };
+    authState.isAuthenticated = true;
+    savedStartupsState.data = [{ id: 12, idea: "A clinic compliance workspace", createdAt: new Date("2026-08-12"), interestTopicId: 2, interestOtherText: null, blueprint }];
+    workspaceState.data = { roadmap: [], scenarios: [], riskRegister: [], crisisResponsePlans: [], notes: [] };
+    render(<Home />);
+    fireEvent.click(screen.getByRole("button", { name: /careloop/i }));
+
+    fireEvent.change(screen.getByPlaceholderText("Note title"), { target: { value: "Pilot interview evidence" } });
+    fireEvent.change(screen.getByPlaceholderText("Topic (optional)"), { target: { value: "Customer research" } });
+    fireEvent.change(screen.getByPlaceholderText(/Write related research/i), { target: { value: "Capture the repeated pain points from the first clinic interviews." } });
+    fireEvent.change(screen.getByPlaceholderText(/Reference link/i), { target: { value: "https://example.com/interview-notes" } });
+    fireEvent.click(screen.getByRole("button", { name: "Save note" }));
+
+    expect(addNoteMutate).toHaveBeenCalledWith({
+      savedBlueprintId: 12,
+      title: "Pilot interview evidence",
+      topic: "Customer research",
+      content: "Capture the repeated pain points from the first clinic interviews.",
+      referenceUrl: "https://example.com/interview-notes",
+    });
   });
 });
