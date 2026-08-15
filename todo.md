@@ -102,3 +102,5 @@
 - [x] Notify the registered project owner when a new landing-page lead is captured.
 - [x] Add clear contact submission success and error states to the standalone landing-page preview.
 - [x] Add regression tests for lead ownership, notification triggers, and CTA submission behavior.
+- [x] Create a visual mind map of the Autonomous AI Startup Builder modules and their relationships.
+- [x] Create a concise end-to-end workflow overview for founders and landing-page visitors.
