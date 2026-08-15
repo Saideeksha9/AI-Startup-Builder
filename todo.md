@@ -92,3 +92,8 @@
 - [x] Add an attachment icon, file selection state, remove control, and file validation to the Venture Advisor input.
 - [x] Include selected attachment metadata in the advisor message context without disrupting existing chat behavior.
 - [x] Add regression tests for attachment validation, storage ownership, and advisor input interaction.
+- [x] Add owner-scoped persistence for direct landing-page headline, copy, CTA, and feature edits.
+- [x] Add a landing-page editor for saved ventures with editable headline, subheadline, CTA, and feature sections.
+- [x] Add standalone HTML export for the edited landing page.
+- [x] Add a reusable standalone landing-page preview route for saved ventures.
+- [x] Add regression tests for landing-page editing ownership, export content, and preview behavior.

@@ -18,6 +18,16 @@ const saveBlueprintSchema = z.object({
   interestOtherText: z.string().trim().min(2).max(240).nullable().optional(),
 });
 
+const landingPageEditSchema = z.object({
+  heroHeadline: z.string().trim().min(10).max(120),
+  heroSubheadline: z.string().trim().min(20).max(240),
+  ctaButtonText: z.string().trim().min(2).max(40),
+  features: z.array(z.object({
+    title: z.string().trim().min(3).max(60),
+    description: z.string().trim().min(15).max(220),
+  }).strict()).length(3),
+}).strict();
+
 function targetDateFromOffset(offsetDays: number) {
   const target = new Date();
   target.setUTCDate(target.getUTCDate() + offsetDays);
@@ -182,6 +192,21 @@ Return only JSON that conforms exactly to the provided schema. In ventureWorkspa
       if (error instanceof TRPCError) throw error;
       console.error("Generating workspace plan failed", error);
       throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "We could not create this venture workspace plan. Please try again." });
+    }
+  }),
+  updateLandingPage: protectedProcedure.input(z.object({ savedBlueprintId: z.number().int().positive(), landingPage: landingPageEditSchema })).mutation(async ({ ctx, input }) => {
+    try {
+      const saved = await getSavedBlueprint(ctx.user.id, input.savedBlueprintId);
+      if (!saved) throw new TRPCError({ code: "NOT_FOUND", message: "This startup was not found." });
+
+      const blueprint = startupBlueprintSchema.parse(JSON.parse(saved.blueprint));
+      const updatedBlueprint = { ...blueprint, landingPage: input.landingPage };
+      await updateSavedBlueprint(ctx.user.id, input.savedBlueprintId, JSON.stringify(updatedBlueprint));
+      return { id: input.savedBlueprintId, landingPage: input.landingPage };
+    } catch (error) {
+      if (error instanceof TRPCError) throw error;
+      console.error("Updating landing page failed", error);
+      throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "We could not save this landing page. Please try again." });
     }
   }),
   list: protectedProcedure.query(async ({ ctx }) => {

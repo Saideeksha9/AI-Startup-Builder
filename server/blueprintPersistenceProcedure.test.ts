@@ -204,6 +204,28 @@ describe("blueprint persistence procedures", () => {
     expect(createMilestone).not.toHaveBeenCalled();
   });
 
+  it("persists landing-page edits only for the authenticated saved venture owner", async () => {
+    vi.mocked(getSavedBlueprint).mockResolvedValue({
+      id: 15,
+      userId: 42,
+      idea: "A platform that makes recurring clinic compliance easier for lean teams.",
+      blueprint: JSON.stringify(blueprint),
+    } as never);
+    const landingPage = { ...blueprint.landingPage, heroHeadline: "Run clinic compliance with confidence." };
+
+    await expect(authenticatedCaller().updateLandingPage({ savedBlueprintId: 15, landingPage })).resolves.toEqual({ id: 15, landingPage });
+
+    expect(getSavedBlueprint).toHaveBeenCalledWith(42, 15);
+    expect(updateSavedBlueprint).toHaveBeenCalledWith(42, 15, JSON.stringify({ ...blueprint, landingPage }));
+  });
+
+  it("does not allow landing-page edits for a venture outside the current account", async () => {
+    vi.mocked(getSavedBlueprint).mockResolvedValue(undefined);
+
+    await expect(authenticatedCaller().updateLandingPage({ savedBlueprintId: 99, landingPage: blueprint.landingPage })).rejects.toMatchObject({ code: "NOT_FOUND" });
+    expect(updateSavedBlueprint).not.toHaveBeenCalled();
+  });
+
   it("rejects persistence requests that do not have an authenticated user", async () => {
     const unauthenticatedCaller = blueprintRouter.createCaller({ user: null } as never);
 

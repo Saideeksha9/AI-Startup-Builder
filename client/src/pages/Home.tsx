@@ -209,6 +209,10 @@ export default function Home() {
 
   function openLandingPagePreview() {
     if (!blueprint) return;
+    if (activeStartupId) {
+      window.open(`/landing/${activeStartupId}/preview`, "_blank", "noopener");
+      return;
+    }
     window.sessionStorage.setItem("autonomous-ai-startup-landing-preview", JSON.stringify(blueprint));
     window.open("/landing-preview", "_blank", "noopener");
   }

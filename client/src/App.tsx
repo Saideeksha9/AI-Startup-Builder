@@ -6,6 +6,8 @@ import ErrorBoundary from "./components/ErrorBoundary";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import DashboardAccess from "./pages/DashboardAccess";
 import LandingPreview from "./pages/LandingPreview";
+import LandingPageEditor from "./pages/LandingPageEditor";
+import SavedLandingPreview from "./pages/SavedLandingPreview";
 import PublicHome from "./pages/PublicHome";
 import { RegisterPage, SignInPage } from "./pages/AccountAccess";
 import ProfileSettings from "./pages/ProfileSettings";
@@ -19,6 +21,8 @@ function Router() {
       <Route path={"/sign-in"} component={SignInPage} />
       <Route path={"/register"} component={RegisterPage} />
       <Route path={"/settings"} component={ProfileSettings} />
+      <Route path={"/landing/:savedBlueprintId/edit"} component={LandingPageEditor} />
+      <Route path={"/landing/:savedBlueprintId/preview"} component={SavedLandingPreview} />
       <Route path={"/landing-preview"} component={LandingPreview} />
       <Route path={"/404"} component={NotFound} />
       {/* Final fallback route */}
