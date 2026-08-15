@@ -23,6 +23,7 @@ vi.mock("./db", () => ({
 }));
 
 vi.mock("./_core/llm", () => ({ invokeLLM: vi.fn() }));
+vi.mock("./storage", () => ({ storagePut: vi.fn() }));
 
 import {
   createChatMessage,
@@ -41,6 +42,7 @@ import {
   updateRisk,
 } from "./db";
 import { invokeLLM } from "./_core/llm";
+import { storagePut } from "./storage";
 import { chatRouter } from "./routers/chat";
 import { workspaceRouter } from "./routers/workspace";
 
@@ -281,6 +283,31 @@ describe("venture workspace and chat procedures", () => {
       reply: "Start with customer discovery.",
       linkedRecordType: null,
     });
+  });
+
+  it("stores an allowed advisor attachment under the current user and passes safe metadata into the chat context", async () => {
+    vi.mocked(getOrCreateConversation).mockResolvedValue({ id: 7, userId: 42, activeStartupId: 12, createdAt: new Date() } as never);
+    vi.mocked(listConversationMessages).mockResolvedValue([] as never);
+    vi.mocked(storagePut).mockResolvedValue({ key: "venture-advisor/42/venture-brief_abc123.txt", url: "/manus-storage/venture-advisor/42/venture-brief_abc123.txt" });
+    vi.mocked(invokeLLM).mockResolvedValue({ choices: [{ message: { content: JSON.stringify({ reply: "I can help you frame the brief.", persist: false, action: {} }) } }] } as never);
+
+    await caller(chatRouter).send({
+      activeStartupId: 12,
+      message: "Help me improve this brief.",
+      attachment: { fileName: "venture brief.txt", mimeType: "text/plain", size: 5, dataBase64: Buffer.from("brief").toString("base64") },
+    });
+
+    expect(storagePut).toHaveBeenCalledWith("venture-advisor/42/venture_brief.txt", expect.any(Buffer), "text/plain");
+    expect(createChatMessage).toHaveBeenCalledWith(expect.objectContaining({ userId: 42, content: "Help me improve this brief.", attachmentFileName: "venture brief.txt", attachmentFileKey: "venture-advisor/42/venture-brief_abc123.txt", attachmentMimeType: "text/plain", attachmentSize: 5 }));
+    expect(invokeLLM).toHaveBeenCalledWith(expect.objectContaining({ messages: expect.arrayContaining([expect.objectContaining({ role: "user", content: expect.stringContaining("Private attachment metadata: venture brief.txt; text/plain; 5 bytes") })]) }));
+  });
+
+  it("rejects unsupported advisor attachment types before storage", async () => {
+    vi.mocked(getOrCreateConversation).mockResolvedValue({ id: 7, userId: 42, activeStartupId: 12, createdAt: new Date() } as never);
+    vi.mocked(listConversationMessages).mockResolvedValue([] as never);
+
+    await expect(caller(chatRouter).send({ activeStartupId: 12, message: "Review this file.", attachment: { fileName: "archive.zip", mimeType: "application/zip", size: 3, dataBase64: "emlw" } })).rejects.toMatchObject({ code: "BAD_REQUEST", message: "Use a PDF, image, text, Markdown, CSV, or JSON file." });
+    expect(storagePut).not.toHaveBeenCalled();
   });
 
   it("treats unrecognised model action labels as advisory text instead of failing the chat", async () => {

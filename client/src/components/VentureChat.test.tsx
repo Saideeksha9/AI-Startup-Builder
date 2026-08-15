@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import React from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { VentureChat } from "./VentureChat";
@@ -8,7 +8,7 @@ const clearMutate = vi.fn();
 const refetchHistory = vi.fn();
 const writeClipboard = vi.fn();
 const chatState = {
-  history: { data: [] as Array<{ id: number; role: "user" | "assistant"; content: string }>, error: null as { message: string } | null },
+  history: { data: [] as Array<{ id: number; role: "user" | "assistant"; content: string; attachmentFileName?: string | null; attachmentUrl?: string | null }>, error: null as { message: string } | null },
   send: { isPending: false, error: null as { message: string } | null },
 };
 
@@ -16,9 +16,9 @@ vi.mock("@/lib/trpc", () => ({
   trpc: {
     chat: {
       history: { useQuery: () => ({ ...chatState.history, refetch: refetchHistory }) },
-      send: { useMutation: (options?: { onError?: (error: { message: string }, variables: { activeStartupId: number | null; message: string }) => void }) => ({
+      send: { useMutation: (options?: { onError?: (error: { message: string }, variables: { activeStartupId: number | null; message: string; attachment?: unknown }) => void }) => ({
         ...chatState.send,
-        mutate: (variables: { activeStartupId: number | null; message: string }) => {
+        mutate: (variables: { activeStartupId: number | null; message: string; attachment?: unknown }) => {
           sendMutate(variables);
           if (chatState.send.error) options?.onError?.(chatState.send.error, variables);
         },
@@ -101,6 +101,24 @@ describe("VentureChat", () => {
     expect(screen.getByText(/3\) Risks and mitigations/)).toBeInTheDocument();
   });
 
+  it("shows a file chip, allows removal, and sends supported attachments", async () => {
+    render(<VentureChat startups={[]} activeStartupId={null} onWorkspaceChange={vi.fn()} />);
+
+    fireEvent.click(screen.getByRole("button", { name: "Open Venture Advisor" }));
+    const file = new File(["brief"], "venture-brief.txt", { type: "text/plain" });
+    fireEvent.change(screen.getByLabelText("Choose attachment file"), { target: { files: [file] } });
+
+    await waitFor(() => expect(screen.getByText("venture-brief.txt")).toBeInTheDocument());
+    fireEvent.click(screen.getByRole("button", { name: "Remove attachment" }));
+    expect(screen.queryByText("venture-brief.txt")).not.toBeInTheDocument();
+
+    fireEvent.change(screen.getByLabelText("Choose attachment file"), { target: { files: [file] } });
+    await waitFor(() => expect(screen.getByText("venture-brief.txt")).toBeInTheDocument());
+    fireEvent.click(screen.getByRole("button", { name: "Send message" }));
+    await waitFor(() => expect(sendMutate).toHaveBeenCalled());
+    expect(sendMutate).toHaveBeenLastCalledWith(expect.objectContaining({ activeStartupId: null, message: "", attachment: expect.objectContaining({ fileName: "venture-brief.txt", mimeType: "text/plain", size: 5 }) }));
+  });
+
   it("shows a retry action that resubmits the failed advisor request", () => {
     chatState.send.error = { message: "The venture advisor could not respond. Please try again." };
     render(<VentureChat startups={[]} activeStartupId={null} onWorkspaceChange={vi.fn()} />);
@@ -111,6 +129,6 @@ describe("VentureChat", () => {
     expect(screen.getByRole("button", { name: "Retry" })).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Retry" }));
     expect(sendMutate).toHaveBeenCalledTimes(2);
-    expect(sendMutate).toHaveBeenLastCalledWith({ activeStartupId: null, message: "Help me prioritise." });
+    expect(sendMutate).toHaveBeenLastCalledWith({ activeStartupId: null, message: "Help me prioritise.", attachment: null });
   });
 });

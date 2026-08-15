@@ -1,7 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { trpc } from "@/lib/trpc";
-import { Bot, Check, ChevronDown, Copy, Eraser, LoaderCircle, MessageCircle, Pin, RotateCcw, Send, Sparkles, X } from "lucide-react";
-import React, { FormEvent, useEffect, useState } from "react";
+import { Bot, Check, ChevronDown, Copy, Eraser, FileText, LoaderCircle, MessageCircle, Paperclip, Pin, RotateCcw, Send, Sparkles, X } from "lucide-react";
+import React, { ChangeEvent, FormEvent, useEffect, useRef, useState } from "react";
 
 type StartupOption = {
   id: number;
@@ -21,14 +21,22 @@ const starterQuestions = [
   "What risks should I consider?",
 ];
 const pinnedPromptsStorageKey = "venture-advisor-pinned-prompts";
+const allowedAttachmentMimeTypes = new Set(["application/json", "application/pdf", "image/jpeg", "image/png", "image/webp", "text/csv", "text/markdown", "text/plain"]);
+const attachmentLimitBytes = 5 * 1024 * 1024;
+
+type SelectedAttachment = { fileName: string; mimeType: string; size: number; dataBase64: string };
+type AdvisorSendInput = { activeStartupId: number | null; message: string; attachment?: SelectedAttachment | null };
 
 export function VentureChat({ startups, activeStartupId, onWorkspaceChange }: VentureChatProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [selectedStartupId, setSelectedStartupId] = useState<number | null>(activeStartupId);
   const [message, setMessage] = useState("");
-  const [failedRequest, setFailedRequest] = useState<{ activeStartupId: number | null; message: string } | null>(null);
+  const [attachment, setAttachment] = useState<SelectedAttachment | null>(null);
+  const [attachmentError, setAttachmentError] = useState<string | null>(null);
+  const [failedRequest, setFailedRequest] = useState<AdvisorSendInput | null>(null);
   const [pinnedPrompts, setPinnedPrompts] = useState<string[]>([]);
   const [copiedResponseId, setCopiedResponseId] = useState<number | null>(null);
+  const attachmentInputRef = useRef<HTMLInputElement | null>(null);
   const history = trpc.chat.history.useQuery(
     { activeStartupId: selectedStartupId },
     { enabled: isOpen, refetchOnWindowFocus: false },
@@ -36,6 +44,9 @@ export function VentureChat({ startups, activeStartupId, onWorkspaceChange }: Ve
   const sendMessage = trpc.chat.send.useMutation({
     onSuccess: () => {
       setMessage("");
+      setAttachment(null);
+      setAttachmentError(null);
+      if (attachmentInputRef.current) attachmentInputRef.current.value = "";
       setFailedRequest(null);
       void history.refetch();
       onWorkspaceChange();
@@ -85,12 +96,43 @@ export function VentureChat({ startups, activeStartupId, onWorkspaceChange }: Ve
     }
   }
 
+  function clearAttachment() {
+    setAttachment(null);
+    setAttachmentError(null);
+    if (attachmentInputRef.current) attachmentInputRef.current.value = "";
+  }
+
+  function chooseAttachment(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    setAttachmentError(null);
+    if (!allowedAttachmentMimeTypes.has(file.type)) {
+      clearAttachment();
+      setAttachmentError("Choose a PDF, image, text, Markdown, CSV, or JSON file.");
+      return;
+    }
+    if (file.size > attachmentLimitBytes) {
+      clearAttachment();
+      setAttachmentError("Files must be 5 MB or smaller.");
+      return;
+    }
+    const reader = new FileReader();
+    reader.onerror = () => { clearAttachment(); setAttachmentError("The selected file could not be read."); };
+    reader.onload = () => {
+      const value = typeof reader.result === "string" ? reader.result : "";
+      const dataBase64 = value.split(",")[1];
+      if (!dataBase64) { clearAttachment(); setAttachmentError("The selected file could not be read."); return; }
+      setAttachment({ fileName: file.name, mimeType: file.type, size: file.size, dataBase64 });
+    };
+    reader.readAsDataURL(file);
+  }
+
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const trimmedMessage = message.trim();
-    if (!trimmedMessage || sendMessage.isPending) return;
+    if ((!trimmedMessage && !attachment) || sendMessage.isPending) return;
     setFailedRequest(null);
-    sendMessage.mutate({ activeStartupId: selectedStartupId, message: trimmedMessage });
+    sendMessage.mutate({ activeStartupId: selectedStartupId, message: trimmedMessage, attachment });
   }
 
   return (
@@ -139,6 +181,7 @@ export function VentureChat({ startups, activeStartupId, onWorkspaceChange }: Ve
             {history.data?.map(chatMessage => (
               <div key={chatMessage.id} className={chatMessage.role === "user" ? "ml-8 rounded-2xl bg-slate-950 px-3.5 py-3 text-sm leading-6 text-white" : "group mr-8 rounded-2xl border border-slate-200 bg-white px-3.5 py-3 text-sm leading-6 text-slate-700"}>
                 <div className="flex items-start justify-between gap-2"><span className="whitespace-pre-wrap">{chatMessage.content}</span>{chatMessage.role === "assistant" ? <Button type="button" variant="ghost" size="icon" onClick={() => void copyAssistantResponse(chatMessage.id, chatMessage.content)} aria-label="Copy advisor response" className="h-7 w-7 shrink-0 text-slate-400 hover:bg-blue-50 hover:text-blue-700">{copiedResponseId === chatMessage.id ? <Check className="h-3.5 w-3.5" aria-hidden="true" /> : <Copy className="h-3.5 w-3.5" aria-hidden="true" />}</Button> : null}</div>
+                {chatMessage.attachmentFileName ? <a href={chatMessage.attachmentUrl ?? undefined} target="_blank" rel="noreferrer" className={chatMessage.role === "user" ? "mt-2 flex items-center gap-1.5 rounded-xl border border-white/15 bg-white/10 px-2.5 py-2 text-xs font-semibold text-white hover:bg-white/15" : "mt-2 flex items-center gap-1.5 rounded-xl border border-slate-200 bg-slate-50 px-2.5 py-2 text-xs font-semibold text-slate-700 hover:bg-blue-50"}><FileText className="h-3.5 w-3.5" aria-hidden="true" />{chatMessage.attachmentFileName}</a> : null}
               </div>
             ))}
             {sendMessage.isPending ? <div className="mr-8 flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-3.5 py-3 text-xs font-medium text-slate-500"><LoaderCircle className="h-3.5 w-3.5 animate-spin text-blue-600" aria-hidden="true" />Working...</div> : null}
@@ -147,10 +190,14 @@ export function VentureChat({ startups, activeStartupId, onWorkspaceChange }: Ve
           </div>
 
           <form onSubmit={submit} className="border-t border-slate-100 bg-white p-3">
+            {attachment ? <div className="mb-2 flex items-center justify-between gap-2 rounded-xl border border-blue-100 bg-blue-50 px-3 py-2 text-xs text-blue-900"><span className="flex min-w-0 items-center gap-1.5"><FileText className="h-3.5 w-3.5 shrink-0 text-blue-700" aria-hidden="true" /><span className="truncate font-semibold">{attachment.fileName}</span><span className="shrink-0 text-blue-700/70">{Math.ceil(attachment.size / 1024)} KB</span></span><Button type="button" variant="ghost" size="icon" onClick={clearAttachment} aria-label="Remove attachment" className="h-6 w-6 shrink-0 rounded-lg text-blue-700 hover:bg-blue-100"><X className="h-3.5 w-3.5" aria-hidden="true" /></Button></div> : null}
+            {attachmentError ? <p role="alert" className="mb-2 rounded-xl bg-rose-50 px-3 py-2 text-xs font-medium text-rose-700">{attachmentError}</p> : null}
             <div className="flex items-center gap-2 rounded-2xl border border-slate-200 bg-slate-50 p-1.5">
+              <input ref={attachmentInputRef} id="venture-chat-attachment" type="file" aria-label="Choose attachment file" accept="application/json,application/pdf,image/jpeg,image/png,image/webp,text/csv,text/markdown,text/plain" onChange={chooseAttachment} className="sr-only" />
+              <Button type="button" variant="ghost" size="icon" onClick={() => attachmentInputRef.current?.click()} disabled={sendMessage.isPending} aria-label="Attach file" className="h-9 w-9 shrink-0 rounded-xl text-slate-500 hover:bg-white hover:text-blue-700"><Paperclip className="h-4 w-4" aria-hidden="true" /></Button>
               <label htmlFor="venture-chat-message" className="sr-only">Message Venture Advisor</label>
               <input id="venture-chat-message" value={message} onChange={event => setMessage(event.target.value)} placeholder="Ask about this venture..." maxLength={2400} className="min-w-0 flex-1 bg-transparent px-2 py-2 text-sm outline-none placeholder:text-slate-400" />
-              <Button type="submit" size="icon" disabled={!message.trim() || sendMessage.isPending} aria-label="Send message" className="h-9 w-9 rounded-xl bg-slate-950 text-white hover:bg-slate-800"><Send className="h-4 w-4" aria-hidden="true" /></Button>
+              <Button type="submit" size="icon" disabled={(!message.trim() && !attachment) || sendMessage.isPending} aria-label="Send message" className="h-9 w-9 rounded-xl bg-slate-950 text-white hover:bg-slate-800"><Send className="h-4 w-4" aria-hidden="true" /></Button>
             </div>
           </form>
         </section>

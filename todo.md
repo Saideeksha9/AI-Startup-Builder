@@ -88,3 +88,7 @@
 - [x] Consolidate authenticated Dashboard, Settings, Sign out, and three-line navigation into one compact header control group.
 - [x] Remove the duplicate in-dashboard account pill so the signed-in identity and logout action appear only once.
 - [x] Add regression and visual checks for the streamlined responsive header.
+- [x] Add a secure Venture Advisor attachment upload endpoint with user-owned storage references.
+- [x] Add an attachment icon, file selection state, remove control, and file validation to the Venture Advisor input.
+- [x] Include selected attachment metadata in the advisor message context without disrupting existing chat behavior.
+- [x] Add regression tests for attachment validation, storage ownership, and advisor input interaction.

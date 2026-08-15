@@ -363,6 +363,11 @@ export async function createChatMessage(input: {
   content: string;
   linkedRecordType?: string | null;
   linkedRecordId?: number | null;
+  attachmentFileName?: string | null;
+  attachmentFileKey?: string | null;
+  attachmentUrl?: string | null;
+  attachmentMimeType?: string | null;
+  attachmentSize?: number | null;
 }) {
   const db = await databaseOrThrow();
   await db.insert(chatMessages).values(input);

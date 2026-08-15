@@ -18,6 +18,7 @@ import {
 } from "../db";
 import { invokeLLM } from "../_core/llm";
 import { protectedProcedure, router } from "../_core/trpc";
+import { storagePut } from "../storage";
 
 const actionSchema = z.object({
   kind: z.enum(["none", "milestone", "risk", "investment_scenario", "crisis_plan"]).default("none"),
@@ -45,10 +46,29 @@ const chatResponseSchema = z.object({
   action: actionSchema,
 }).strip();
 
+const attachmentSchema = z.object({
+  fileName: z.string().trim().min(1).max(255),
+  mimeType: z.string().trim().min(1).max(160),
+  size: z.number().int().positive().max(5 * 1024 * 1024),
+  dataBase64: z.string().min(4).max(7_000_000),
+});
+
 const chatInputSchema = z.object({
   activeStartupId: z.number().int().positive().nullable(),
-  message: z.string().trim().min(1).max(2400),
-});
+  message: z.string().trim().max(2400),
+  attachment: attachmentSchema.nullable().optional(),
+}).refine(input => input.message.length > 0 || Boolean(input.attachment), { message: "Write a message or attach a file." });
+
+const allowedAttachmentMimeTypes = new Set([
+  "application/json",
+  "application/pdf",
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+  "text/csv",
+  "text/markdown",
+  "text/plain",
+]);
 
 const explicitConfirmation = /\b(confirm|confirmed|approve|approved|go ahead|apply (?:it|the update)|save (?:it|the update))\b/i;
 
@@ -78,6 +98,24 @@ function textOrNull(value: unknown) {
 
 function integerOrNull(value: unknown) {
   return typeof value === "number" && Number.isInteger(value) ? value : null;
+}
+
+function decodeAttachment(input: z.infer<typeof attachmentSchema>) {
+  if (!allowedAttachmentMimeTypes.has(input.mimeType)) {
+    throw new TRPCError({ code: "BAD_REQUEST", message: "Use a PDF, image, text, Markdown, CSV, or JSON file." });
+  }
+  if (!/^[A-Za-z0-9+/]+={0,2}$/.test(input.dataBase64) || input.dataBase64.length % 4 !== 0) {
+    throw new TRPCError({ code: "BAD_REQUEST", message: "The selected file could not be read." });
+  }
+  const bytes = Buffer.from(input.dataBase64, "base64");
+  if (bytes.length !== input.size || bytes.length > 5 * 1024 * 1024) {
+    throw new TRPCError({ code: "BAD_REQUEST", message: "Files must be 5 MB or smaller." });
+  }
+  return bytes;
+}
+
+function safeAttachmentName(fileName: string) {
+  return fileName.replace(/[^a-zA-Z0-9._-]/g, "_").replace(/^_+/, "").slice(0, 180) || "attachment";
 }
 
 function parseAdvisorResponse(content: string) {
@@ -189,7 +227,26 @@ export const chatRouter = router({
       const context = await contextFor(ctx.user.id, input.activeStartupId);
       const conversation = await getOrCreateConversation(ctx.user.id, input.activeStartupId);
       const history = await listConversationMessages(ctx.user.id, conversation.id);
-      await createChatMessage({ conversationId: conversation.id, userId: ctx.user.id, savedBlueprintId: input.activeStartupId, role: "user", content: input.message });
+      const attachment = input.attachment
+        ? await (async () => {
+          const bytes = decodeAttachment(input.attachment!);
+          const stored = await storagePut(`venture-advisor/${ctx.user.id}/${safeAttachmentName(input.attachment!.fileName)}`, bytes, input.attachment!.mimeType);
+          return { ...input.attachment!, ...stored };
+        })()
+        : null;
+      const userMessage = input.message || `Please review the attached file: ${attachment?.fileName ?? "attachment"}.`;
+      await createChatMessage({
+        conversationId: conversation.id,
+        userId: ctx.user.id,
+        savedBlueprintId: input.activeStartupId,
+        role: "user",
+        content: userMessage,
+        attachmentFileName: attachment?.fileName ?? null,
+        attachmentFileKey: attachment?.key ?? null,
+        attachmentUrl: attachment?.url ?? null,
+        attachmentMimeType: attachment?.mimeType ?? null,
+        attachmentSize: attachment?.size ?? null,
+      });
 
       const modelResult = await invokeLLM({
         model: "gpt-5-mini",
@@ -203,7 +260,7 @@ export const chatRouter = router({
             content: `PRIVATE CONTEXT:\n${JSON.stringify(context)}`,
           },
           ...history.map(message => ({ role: message.role, content: message.content } as const)),
-          { role: "user", content: input.message },
+          { role: "user", content: `${userMessage}${attachment ? `\n\n[Private attachment metadata: ${attachment.fileName}; ${attachment.mimeType}; ${attachment.size} bytes. The file contents are not automatically parsed, so ask the founder for the key details they want to discuss.]` : ""}` },
         ],
       });
 
@@ -223,7 +280,7 @@ export const chatRouter = router({
         ? `proposal_update_${advisor.action.kind}`
         : null;
       const hasMatchingProposal = Boolean(proposedUpdateKey && history.some(message => message.role === "assistant" && message.linkedRecordType === proposedUpdateKey && message.linkedRecordId === advisor.action.recordId));
-      const canPersistUpdate = advisor.action.operation !== "update" || (explicitConfirmation.test(input.message) && hasMatchingProposal);
+      const canPersistUpdate = advisor.action.operation !== "update" || (explicitConfirmation.test(userMessage) && hasMatchingProposal);
       const persisted = advisor.persist && input.activeStartupId !== null && canPersistUpdate ? await persistAction(ctx.user.id, input.activeStartupId, advisor.action) : null;
       const confirmationRequired = advisor.action.operation === "update" && !persisted && !canPersistUpdate;
       const reply = persisted
