@@ -78,6 +78,21 @@ export const savedBlueprints = mysqlTable(
 export type SavedBlueprint = typeof savedBlueprints.$inferSelect;
 export type InsertSavedBlueprint = typeof savedBlueprints.$inferInsert;
 
+export const landingLeads = mysqlTable(
+  "landingLeads",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    userId: int("userId").notNull().references(() => users.id, { onDelete: "cascade" }),
+    savedBlueprintId: int("savedBlueprintId").notNull().references(() => savedBlueprints.id, { onDelete: "cascade" }),
+    visitorName: varchar("visitorName", { length: 160 }).notNull(),
+    visitorEmail: varchar("visitorEmail", { length: 320 }).notNull(),
+    companyName: varchar("companyName", { length: 160 }),
+    message: text("message"),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+  },
+  table => [index("landingLeads_owner_venture_created_idx").on(table.userId, table.savedBlueprintId, table.createdAt)],
+);
+
 export const interestFields = mysqlTable("interestFields", {
   id: int("id").autoincrement().primaryKey(),
   name: varchar("name", { length: 120 }).notNull().unique(),

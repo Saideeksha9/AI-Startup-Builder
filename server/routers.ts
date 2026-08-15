@@ -3,6 +3,7 @@ import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
 import { publicProcedure, router } from "./_core/trpc";
 import { blueprintRouter } from "./routers/blueprint";
+import { landingRouter } from "./routers/landing";
 import { chatRouter } from "./routers/chat";
 import { taxonomyRouter } from "./routers/taxonomy";
 import { workspaceRouter } from "./routers/workspace";
@@ -22,6 +23,7 @@ export const appRouter = router({
     }),
   }),
   blueprint: blueprintRouter,
+  landing: landingRouter,
   taxonomy: taxonomyRouter,
   workspace: workspaceRouter,
   chat: chatRouter,

@@ -10,6 +10,7 @@ import {
   interestPendingReviews,
   interestTopics,
   investmentScenarios,
+  landingLeads,
   milestones,
   risks,
   savedBlueprints,
@@ -191,6 +192,25 @@ export async function getSavedBlueprint(userId: number, savedBlueprintId: number
     .where(and(eq(savedBlueprints.id, savedBlueprintId), eq(savedBlueprints.userId, userId)))
     .limit(1);
   return rows[0];
+}
+
+export async function getSavedBlueprintPublic(savedBlueprintId: number) {
+  const db = await databaseOrThrow();
+  const rows = await db.select().from(savedBlueprints).where(eq(savedBlueprints.id, savedBlueprintId)).limit(1);
+  return rows[0];
+}
+
+export async function createLandingLead(input: {
+  userId: number;
+  savedBlueprintId: number;
+  visitorName: string;
+  visitorEmail: string;
+  companyName?: string | null;
+  message?: string | null;
+}) {
+  const db = await databaseOrThrow();
+  const result = await db.insert(landingLeads).values(input);
+  return Number(result[0].insertId);
 }
 
 export async function createMilestone(input: {

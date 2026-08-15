@@ -43,6 +43,13 @@
       "when": 1786791876821,
       "tag": "0005_groovy_speedball",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "5",
+      "when": 1786793530218,
+      "tag": "0006_yellow_mastermind",
+      "breakpoints": true
     }
   ]
 }

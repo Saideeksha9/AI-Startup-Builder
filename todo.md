@@ -97,3 +97,8 @@
 - [x] Add standalone HTML export for the edited landing page.
 - [x] Add a reusable standalone landing-page preview route for saved ventures.
 - [x] Add regression tests for landing-page editing ownership, export content, and preview behavior.
+- [x] Add a public visitor lead form triggered by the saved landing-page CTA.
+- [x] Persist visitor contact submissions under the owner and saved venture.
+- [x] Notify the registered project owner when a new landing-page lead is captured.
+- [x] Add clear contact submission success and error states to the standalone landing-page preview.
+- [x] Add regression tests for lead ownership, notification triggers, and CTA submission behavior.
