@@ -4,6 +4,7 @@ import {
   chatConversations,
   chatMessages,
   crisisPlans,
+  founderOnboarding,
   InsertUser,
   interestFields,
   interestPendingReviews,
@@ -12,6 +13,7 @@ import {
   milestones,
   risks,
   savedBlueprints,
+  userProfiles,
   users,
   ventureNotes,
 } from "../drizzle/schema";
@@ -88,6 +90,46 @@ export async function getUserByOpenId(openId: string) {
   if (!db) return undefined;
   const result = await db.select().from(users).where(eq(users.openId, openId)).limit(1);
   return result[0];
+}
+
+export async function getUserProfile(userId: number) {
+  const db = await databaseOrThrow();
+  const rows = await db.select().from(userProfiles).where(eq(userProfiles.userId, userId)).limit(1);
+  return rows[0];
+}
+
+export async function upsertUserProfile(input: {
+  userId: number;
+  fullName?: string | null;
+  jobTitle?: string | null;
+  companyName?: string | null;
+  preferredFocus?: string | null;
+  weeklyDigest: boolean;
+  onboardingEmailTips: boolean;
+}) {
+  const db = await databaseOrThrow();
+  const values = {
+    userId: input.userId,
+    fullName: input.fullName ?? null,
+    jobTitle: input.jobTitle ?? null,
+    companyName: input.companyName ?? null,
+    preferredFocus: input.preferredFocus ?? null,
+    weeklyDigest: input.weeklyDigest,
+    onboardingEmailTips: input.onboardingEmailTips,
+  };
+  await db.insert(userProfiles).values(values).onDuplicateKeyUpdate({ set: values });
+}
+
+export async function getFounderOnboarding(userId: number) {
+  const db = await databaseOrThrow();
+  const rows = await db.select().from(founderOnboarding).where(eq(founderOnboarding.userId, userId)).limit(1);
+  return rows[0];
+}
+
+export async function upsertFounderOnboarding(input: { userId: number; completedSteps: string; dismissed: boolean }) {
+  const db = await databaseOrThrow();
+  const values = { ...input };
+  await db.insert(founderOnboarding).values(values).onDuplicateKeyUpdate({ set: values });
 }
 
 export async function listInterestFields() {

@@ -80,3 +80,8 @@
 - [x] Update public navigation to link directly to the dedicated account-access routes.
 - [x] Add regression tests for persistent navigation and account-access routing.
 - [x] Use the verified secure provider entry point for registration rather than an undocumented account-creation parameter.
+- [x] Add protected profile settings for personal information and founder preferences.
+- [x] Persist profile preferences and onboarding completion state per account.
+- [x] Add a dashboard welcome checklist that guides new founders through initial setup and their first venture.
+- [x] Add clear passwordless email-confirmation messaging to account-access pages without altering the secure provider OAuth flow.
+- [x] Add regression tests for profile updates, onboarding state, and account-confirmation messaging.

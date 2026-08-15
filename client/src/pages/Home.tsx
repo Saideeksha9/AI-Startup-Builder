@@ -2,6 +2,7 @@ import { useAuth } from "@/_core/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { VentureChat } from "@/components/VentureChat";
 import { VentureWorkspaceViews } from "@/components/VentureWorkspaceViews";
+import { FounderWelcomeChecklist } from "@/components/FounderWelcomeChecklist";
 import { startLogin } from "@/const";
 import { trpc } from "@/lib/trpc";
 import { downloadVentureWorkspaceMarkdown, downloadVentureWorkspacePdf } from "@/lib/ventureExport";
@@ -32,6 +33,7 @@ import {
   UsersRound,
 } from "lucide-react";
 import React, { FormEvent, useEffect, useMemo, useRef, useState } from "react";
+import { useLocation } from "wouter";
 
 type StartupBlueprint = {
   startupName: string;
@@ -97,12 +99,14 @@ export default function Home() {
   const notesSectionRef = useRef<HTMLElement | null>(null);
 
   const { user, loading: isAuthLoading, isAuthenticated, logout } = useAuth();
+  const [, setLocation] = useLocation();
   const fields = trpc.taxonomy.fields.useQuery(undefined, { staleTime: 60_000 });
   const topicQueryInput = useMemo(() => ({ fieldId: Number(fieldId) }), [fieldId]);
   const topics = trpc.taxonomy.topics.useQuery(topicQueryInput, { enabled: Boolean(fieldId), staleTime: 60_000, retry: 1 });
   const savedStartups = trpc.blueprint.list.useQuery(undefined, { enabled: isAuthenticated, retry: false, refetchOnWindowFocus: false });
   const workspace = trpc.workspace.get.useQuery({ savedBlueprintId: activeStartupId }, { enabled: Boolean(activeStartupId), refetchOnWindowFocus: false });
   const workspaceExport = trpc.workspace.export.useQuery({ savedBlueprintId: activeStartupId }, { enabled: false, retry: false });
+  const profile = trpc.profile.get.useQuery(undefined, { enabled: isAuthenticated, retry: false, refetchOnWindowFocus: false });
 
   const saveBlueprint = trpc.blueprint.save.useMutation({
     onSuccess: result => {
@@ -130,6 +134,7 @@ export default function Home() {
   const deleteCrisisPlan = trpc.workspace.deleteCrisisPlan.useMutation({ onSuccess: () => void workspace.refetch() });
   const addNote = trpc.workspace.addNote.useMutation({ onSuccess: () => { setNoteTitle(""); setNoteTopic(""); setNoteContent(""); setNoteReferenceUrl(""); void workspace.refetch(); } });
   const deleteNote = trpc.workspace.deleteNote.useMutation({ onSuccess: () => void workspace.refetch() });
+  const updateOnboarding = trpc.profile.updateOnboarding.useMutation({ onSuccess: () => void profile.refetch() });
 
   const isLoading = generateBlueprint.isPending;
   const blueprint = selectedSavedStartup?.blueprint ?? generateBlueprint.data;
@@ -139,6 +144,13 @@ export default function Home() {
   const detailedActionPlan = blueprint?.ventureWorkspace?.detailedActionPlan ?? [];
   const activeStartupName = selectedSavedStartup?.blueprint.startupName ?? savedStartups.data?.find(startup => startup.id === activeStartupId)?.blueprint.startupName ?? null;
   const errorMessage = inputError ?? exportError ?? generateBlueprint.error?.message ?? saveBlueprint.error?.message ?? savedStartups.error?.message ?? workspace.error?.message ?? workspaceExport.error?.message ?? (fieldId ? topics.error?.message : null);
+  const completedOnboardingSteps = profile.data?.onboarding.completedSteps ?? [];
+  const profileComplete = Boolean(profile.data?.profile.fullName?.trim() && profile.data?.profile.preferredFocus?.trim());
+
+  function updateChecklist(step: "review_profile" | "save_first_venture" | "review_workspace" | "ask_advisor") {
+    const updatedSteps = completedOnboardingSteps.includes(step) ? completedOnboardingSteps.filter(current => current !== step) : [...completedOnboardingSteps, step];
+    updateOnboarding.mutate({ completedSteps: updatedSteps, dismissed: profile.data?.onboarding.dismissed ?? false });
+  }
 
   useEffect(() => {
     if (activeStartupId && !savedStartups.data?.some(startup => startup.id === activeStartupId)) {
@@ -299,8 +311,20 @@ export default function Home() {
           {errorMessage ? <p role="alert" className="mt-4 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-medium text-rose-700">{errorMessage}</p> : null}
         </header>
 
-        {isAuthenticated ? (
-          <section aria-label="Saved blueprints" className="mx-auto mt-7 max-w-4xl rounded-3xl border border-slate-200 bg-white/70 p-4 shadow-sm backdrop-blur-sm sm:p-5">
+          {isAuthenticated ? (
+            <FounderWelcomeChecklist
+              completedSteps={completedOnboardingSteps}
+              dismissed={profile.data?.onboarding.dismissed ?? false}
+              profileComplete={profileComplete}
+              savedVentureCount={profile.data?.onboarding.savedVentureCount ?? savedStartups.data?.length ?? 0}
+              onToggleStep={updateChecklist}
+              onOpenSettings={() => setLocation("/settings")}
+              onDismiss={() => updateOnboarding.mutate({ completedSteps: completedOnboardingSteps, dismissed: true })}
+            />
+          ) : null}
+
+          {isAuthenticated ? (
+            <section aria-label="Saved blueprints" className="mx-auto mt-7 max-w-4xl rounded-3xl border border-slate-200 bg-white/70 p-4 shadow-sm backdrop-blur-sm sm:p-5">
             <div className="flex items-center gap-3"><span className="flex h-9 w-9 items-center justify-center rounded-xl bg-blue-50 text-blue-600"><Bookmark className="h-4 w-4" aria-hidden="true" /></span><div><h2 className="text-sm font-black tracking-[-0.015em] text-black">Saved ventures</h2><p className="text-xs font-light text-slate-500">Save a generated blueprint when you are ready, then open its private workspace.</p></div></div>
             {savedStartups.isLoading ? <div className="mt-4 flex items-center gap-2 text-xs text-slate-500"><LoaderCircle className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />Loading saved ventures...</div> : savedStartups.data?.length ? <div className="mt-4 flex gap-2 overflow-x-auto pb-1">{savedStartups.data.map(startup => <button key={startup.id} type="button" onClick={() => openSavedStartup(startup as SavedStartup)} aria-pressed={activeStartupId === startup.id} className={activeStartupId === startup.id ? "min-w-52 rounded-2xl border border-blue-300 bg-blue-50 px-4 py-3 text-left ring-2 ring-blue-100" : "min-w-52 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-left transition hover:border-blue-200 hover:bg-blue-50/60"}><div className="flex items-center justify-between gap-2"><p className="truncate text-sm font-bold text-slate-800">{startup.blueprint.startupName}</p>{activeStartupId === startup.id ? <span className="rounded-full bg-blue-600 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide text-white">Open</span> : null}</div><div className="mt-1 flex items-center gap-1.5 text-[11px] text-slate-500"><Clock3 className="h-3 w-3" aria-hidden="true" />{new Date(startup.createdAt).toLocaleDateString()}</div></button>)}</div> : <p className="mt-4 text-xs text-slate-500">Your saved startup blueprints will appear here.</p>}
           </section>

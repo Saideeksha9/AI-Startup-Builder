@@ -8,6 +8,7 @@ import DashboardAccess from "./pages/DashboardAccess";
 import LandingPreview from "./pages/LandingPreview";
 import PublicHome from "./pages/PublicHome";
 import { RegisterPage, SignInPage } from "./pages/AccountAccess";
+import ProfileSettings from "./pages/ProfileSettings";
 
 function Router() {
   // make sure to consider if you need authentication for certain routes
@@ -17,6 +18,7 @@ function Router() {
       <Route path={"/dashboard"} component={DashboardAccess} />
       <Route path={"/sign-in"} component={SignInPage} />
       <Route path={"/register"} component={RegisterPage} />
+      <Route path={"/settings"} component={ProfileSettings} />
       <Route path={"/landing-preview"} component={LandingPreview} />
       <Route path={"/404"} component={NotFound} />
       {/* Final fallback route */}

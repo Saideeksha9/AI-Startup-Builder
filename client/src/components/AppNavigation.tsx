@@ -1,6 +1,6 @@
 import { useAuth } from "@/_core/hooks/useAuth";
 import { Button } from "@/components/ui/button";
-import { BarChart3, LogOut, Menu, Sparkles, X } from "lucide-react";
+import { BarChart3, LogOut, Menu, Settings, Sparkles, X } from "lucide-react";
 import React, { useState } from "react";
 import { useLocation } from "wouter";
 
@@ -11,6 +11,7 @@ const navigationItems = [
   { label: "App Info", href: "/#app-info" },
   { label: "How It Works", href: "/#how-it-works" },
   { label: "Dashboard", href: "/dashboard" },
+  { label: "Profile settings", href: "/settings" },
 ];
 
 export function AppNavigation() {
@@ -30,7 +31,7 @@ export function AppNavigation() {
         <span className="truncate text-sm font-black tracking-[-0.02em] text-slate-900">Autonomous AI Startup Builder</span>
       </button>
       <div className="flex shrink-0 items-center gap-2">
-        {isAuthenticated && !loading ? <><Button type="button" onClick={() => navigate("/dashboard")} className="hidden rounded-full bg-slate-950 px-4 text-xs font-bold text-white hover:bg-slate-800 sm:inline-flex"><BarChart3 className="h-3.5 w-3.5" aria-hidden="true" />Dashboard</Button><Button type="button" variant="outline" onClick={() => void logout()} className="hidden rounded-full border-slate-200 bg-white px-3 text-xs font-bold text-slate-700 hover:bg-slate-50 sm:inline-flex" aria-label={`Sign out ${user?.name ?? "of your account"}`}><LogOut className="h-3.5 w-3.5" aria-hidden="true" />Sign out</Button></> : <><Button type="button" variant="outline" onClick={() => navigate("/sign-in")} className="hidden rounded-full border-slate-200 bg-white px-4 text-xs font-bold text-slate-700 hover:bg-slate-50 sm:inline-flex">Sign in</Button><Button type="button" onClick={() => navigate("/register")} className="hidden rounded-full bg-slate-950 px-4 text-xs font-bold text-white hover:bg-slate-800 sm:inline-flex">Create account</Button></>}
+        {isAuthenticated && !loading ? <><Button type="button" onClick={() => navigate("/dashboard")} className="hidden rounded-full bg-slate-950 px-4 text-xs font-bold text-white hover:bg-slate-800 sm:inline-flex"><BarChart3 className="h-3.5 w-3.5" aria-hidden="true" />Dashboard</Button><Button type="button" variant="outline" size="icon" onClick={() => navigate("/settings")} className="hidden rounded-full border-slate-200 bg-white text-slate-700 hover:bg-slate-50 sm:inline-flex" aria-label="Open profile settings"><Settings className="h-3.5 w-3.5" aria-hidden="true" /></Button><Button type="button" variant="outline" onClick={() => void logout()} className="hidden rounded-full border-slate-200 bg-white px-3 text-xs font-bold text-slate-700 hover:bg-slate-50 sm:inline-flex" aria-label={`Sign out ${user?.name ?? "of your account"}`}><LogOut className="h-3.5 w-3.5" aria-hidden="true" />Sign out</Button></> : <><Button type="button" variant="outline" onClick={() => navigate("/sign-in")} className="hidden rounded-full border-slate-200 bg-white px-4 text-xs font-bold text-slate-700 hover:bg-slate-50 sm:inline-flex">Sign in</Button><Button type="button" onClick={() => navigate("/register")} className="hidden rounded-full bg-slate-950 px-4 text-xs font-bold text-white hover:bg-slate-800 sm:inline-flex">Create account</Button></>}
         <Button type="button" variant="outline" size="icon" onClick={() => setIsOpen(open => !open)} aria-expanded={isOpen} aria-controls="app-navigation" aria-label={isOpen ? "Close navigation menu" : "Open navigation menu"} className="rounded-xl border-slate-200 bg-white text-slate-800 hover:bg-slate-50">{isOpen ? <X className="h-5 w-5" aria-hidden="true" /> : <Menu className="h-5 w-5" aria-hidden="true" />}</Button>
       </div>
     </div>

@@ -29,6 +29,13 @@
       "when": 1786696861106,
       "tag": "0003_bright_talisman",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "5",
+      "when": 1786790189156,
+      "tag": "0004_dapper_overlord",
+      "breakpoints": true
     }
   ]
 }

@@ -17,6 +17,7 @@ const deleteNoteMutate = vi.fn();
 const refetchWorkspaceExport = vi.fn();
 const downloadWorkspaceMarkdown = vi.fn();
 const downloadWorkspacePdf = vi.fn();
+const updateOnboardingMutate = vi.fn();
 
 const blueprint = {
   startupName: "CareLoop",
@@ -70,6 +71,14 @@ const saveState = { isPending: false, isSuccess: false, isError: false, error: n
 const savedStartupsState: { data: Array<{ id: number; idea: string; createdAt: Date; interestTopicId: number | null; interestOtherText: string | null; blueprint: typeof blueprint }> | undefined; isLoading: boolean; error: { message: string } | null } = { data: [], isLoading: false, error: null };
 const workspaceState: { data: unknown; isLoading: boolean; error: { message: string } | null } = { data: undefined, isLoading: false, error: null };
 const workspaceExportState: { data: unknown; isFetching: boolean; error: { message: string } | null } = { data: undefined, isFetching: false, error: null };
+const profileState = {
+  data: {
+    account: { name: "Cherry 99", email: "cherry@example.com" },
+    profile: { fullName: null as string | null, jobTitle: null, companyName: null, preferredFocus: null as string | null, weeklyDigest: true, onboardingEmailTips: true },
+    onboarding: { completedSteps: [] as Array<"review_profile" | "save_first_venture" | "review_workspace" | "ask_advisor">, dismissed: false, savedVentureCount: 0 },
+  },
+  refetch: vi.fn(),
+};
 const taxonomyFields = [{ id: 1, name: "Medical/Healthcare", slug: "medical-healthcare" }];
 const taxonomyTopics = [{ id: 2, fieldId: 1, name: "Telemedicine", slug: "telemedicine" }];
 
@@ -106,6 +115,10 @@ vi.mock("@/lib/trpc", () => ({
       addNote: { useMutation: () => ({ isPending: false, mutate: addNoteMutate }) },
       deleteNote: { useMutation: () => ({ isPending: false, mutate: deleteNoteMutate }) },
     },
+    profile: {
+      get: { useQuery: () => profileState },
+      updateOnboarding: { useMutation: () => ({ isPending: false, mutate: updateOnboardingMutate }) },
+    },
   },
 }));
 
@@ -124,6 +137,13 @@ describe("Home venture workspace", () => {
     refetchWorkspaceExport.mockClear();
     downloadWorkspaceMarkdown.mockClear();
     downloadWorkspacePdf.mockClear();
+    updateOnboardingMutate.mockClear();
+    profileState.refetch.mockClear();
+    profileState.data.profile.fullName = null;
+    profileState.data.profile.preferredFocus = null;
+    profileState.data.onboarding.completedSteps = [];
+    profileState.data.onboarding.dismissed = false;
+    profileState.data.onboarding.savedVentureCount = 0;
     Object.defineProperty(window, "open", { value: openWindow, writable: true });
     window.sessionStorage.clear();
     authState.user = null;
@@ -245,6 +265,18 @@ describe("Home venture workspace", () => {
     expect(screen.getByText("Risk register")).toBeInTheDocument();
     expect(screen.getAllByText("Crisis plans").length).toBeGreaterThan(0);
     expect(screen.getByTestId("venture-chat")).toBeInTheDocument();
+  });
+
+  it("shows a first-founder checklist and persists an optional completed step", () => {
+    authState.user = { name: "Cherry 99" };
+    authState.isAuthenticated = true;
+    render(<Home />);
+
+    expect(screen.getByRole("region", { name: "Founder welcome checklist" })).toBeInTheDocument();
+    expect(screen.getByText("Start with a clear first move.")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Mark complete: Review a venture workspace" }));
+
+    expect(updateOnboardingMutate).toHaveBeenCalledWith({ completedSteps: ["review_workspace"], dismissed: false });
   });
 
   it("offers a one-click workspace plan for legacy startups without recommendations", () => {

@@ -30,6 +30,8 @@ describe("AccountAccess", () => {
 
   it("provides a dedicated registration page that launches secure account creation", () => {
     render(<AccountAccess mode="register" />);
+    expect(screen.getByText("Passwordless email confirmation")).toBeInTheDocument();
+    expect(screen.getByText(/There is no password to create, remember, or store/i)).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Open secure account portal" }));
     expect(startRegistrationMock).toHaveBeenCalledTimes(1);
   });

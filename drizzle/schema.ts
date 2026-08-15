@@ -1,4 +1,4 @@
-import { date, decimal, index, int, mysqlEnum, mysqlTable, text, timestamp, unique, varchar } from "drizzle-orm/mysql-core";
+import { boolean, date, decimal, index, int, mysqlEnum, mysqlTable, text, timestamp, unique, varchar } from "drizzle-orm/mysql-core";
 
 /**
  * Core user table backing auth flow.
@@ -24,6 +24,40 @@ export const users = mysqlTable("users", {
 
 export type User = typeof users.$inferSelect;
 export type InsertUser = typeof users.$inferInsert;
+
+export const userProfiles = mysqlTable(
+  "userProfiles",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    userId: int("userId").notNull().references(() => users.id, { onDelete: "cascade" }),
+    fullName: varchar("fullName", { length: 160 }),
+    jobTitle: varchar("jobTitle", { length: 160 }),
+    companyName: varchar("companyName", { length: 160 }),
+    preferredFocus: varchar("preferredFocus", { length: 120 }),
+    weeklyDigest: boolean("weeklyDigest").notNull().default(true),
+    onboardingEmailTips: boolean("onboardingEmailTips").notNull().default(true),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+    updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  },
+  table => [unique("userProfiles_user_unique").on(table.userId)],
+);
+
+export type UserProfile = typeof userProfiles.$inferSelect;
+
+export const founderOnboarding = mysqlTable(
+  "founderOnboarding",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    userId: int("userId").notNull().references(() => users.id, { onDelete: "cascade" }),
+    completedSteps: varchar("completedSteps", { length: 1024 }).notNull().default("[]"),
+    dismissed: boolean("dismissed").notNull().default(false),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+    updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  },
+  table => [unique("founderOnboarding_user_unique").on(table.userId)],
+);
+
+export type FounderOnboarding = typeof founderOnboarding.$inferSelect;
 
 export const savedBlueprints = mysqlTable(
   "savedBlueprints",
