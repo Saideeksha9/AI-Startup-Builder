@@ -33,14 +33,20 @@ describe("AppNavigation", () => {
     expect(window.location.pathname).toBe("/register");
   });
 
-  it("shows dashboard and sign-out controls to an authenticated user", () => {
+  it("groups dashboard, settings, and sign-out inside one authenticated menu", () => {
     authState.isAuthenticated = true;
     authState.user = { name: "Cherry" };
     render(<AppNavigation />);
 
+    expect(screen.queryByRole("button", { name: "Dashboard" })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Open navigation menu" }));
     fireEvent.click(screen.getByRole("button", { name: "Dashboard" }));
     expect(window.location.pathname).toBe("/dashboard");
-    fireEvent.click(screen.getByRole("button", { name: "Sign out Cherry" }));
+    fireEvent.click(screen.getByRole("button", { name: "Open navigation menu" }));
+    fireEvent.click(screen.getByRole("button", { name: "Settings" }));
+    expect(window.location.pathname).toBe("/settings");
+    fireEvent.click(screen.getByRole("button", { name: "Open navigation menu" }));
+    fireEvent.click(screen.getByRole("button", { name: "Sign out" }));
     expect(logoutMock).toHaveBeenCalledTimes(1);
   });
 });

@@ -45,6 +45,7 @@ describe("PublicHome", () => {
     authState.isAuthenticated = true;
     render(<PublicHome />);
 
+    fireEvent.click(screen.getByRole("button", { name: "Open navigation menu" }));
     fireEvent.click(screen.getByRole("button", { name: "Dashboard" }));
 
     expect(window.location.pathname).toBe("/dashboard");

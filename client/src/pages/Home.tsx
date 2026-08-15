@@ -19,8 +19,6 @@ import {
   LayoutDashboard,
   Lightbulb,
   LoaderCircle,
-  LogIn,
-  LogOut,
   Megaphone,
   Plus,
   Rocket,
@@ -98,7 +96,7 @@ export default function Home() {
   const [exportError, setExportError] = useState<string | null>(null);
   const notesSectionRef = useRef<HTMLElement | null>(null);
 
-  const { user, loading: isAuthLoading, isAuthenticated, logout } = useAuth();
+  const { isAuthenticated } = useAuth();
   const [, setLocation] = useLocation();
   const fields = trpc.taxonomy.fields.useQuery(undefined, { staleTime: 60_000 });
   const topicQueryInput = useMemo(() => ({ fieldId: Number(fieldId) }), [fieldId]);
@@ -269,18 +267,6 @@ export default function Home() {
 
       <div className="relative mx-auto max-w-6xl px-5 pb-16 pt-14 sm:px-8 sm:pt-20 lg:px-10">
         <header className="mx-auto max-w-4xl text-center">
-          <div className="mb-7 flex justify-center sm:absolute sm:right-10 sm:top-8 sm:mb-0">
-            {isAuthLoading ? (
-              <span className="flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-400"><LoaderCircle className="h-4 w-4 animate-spin" aria-hidden="true" /></span>
-            ) : isAuthenticated ? (
-              <div className="flex items-center gap-1.5 rounded-full border border-slate-200 bg-white p-1 shadow-sm">
-                <span className="hidden px-2 text-xs font-semibold text-slate-600 sm:inline">{user?.name ?? "Signed in"}</span>
-                <Button type="button" variant="ghost" size="icon" onClick={() => void logout()} aria-label="Sign out" className="h-8 w-8 rounded-full text-slate-500 hover:bg-slate-100 hover:text-slate-900"><LogOut className="h-4 w-4" aria-hidden="true" /></Button>
-              </div>
-            ) : (
-              <Button type="button" variant="outline" onClick={() => startLogin()} className="h-9 rounded-full border-slate-200 bg-white px-4 text-xs font-semibold text-slate-700 shadow-sm hover:bg-slate-50"><LogIn className="h-3.5 w-3.5" aria-hidden="true" />Sign in to save</Button>
-            )}
-          </div>
           <div className="inline-flex items-center gap-2 text-[11px] font-bold uppercase tracking-[0.24em] text-slate-500"><Rocket className="h-4 w-4 text-blue-600" aria-hidden="true" />Autonomous AI Startup Builder</div>
           <h1 className="mt-5 text-4xl font-black tracking-[-0.055em] text-black sm:text-6xl">Turn raw ideas into<span className="block">clear ventures.</span></h1>
           <p className="mx-auto mt-5 max-w-xl text-base font-light leading-7 text-slate-600 sm:text-lg">Generate the initial strategy, then manage the roadmap, risks, funding scenarios, and crisis readiness in one private workspace.</p>

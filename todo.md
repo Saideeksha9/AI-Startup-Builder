@@ -85,3 +85,6 @@
 - [x] Add a dashboard welcome checklist that guides new founders through initial setup and their first venture.
 - [x] Add clear passwordless email-confirmation messaging to account-access pages without altering the secure provider OAuth flow.
 - [x] Add regression tests for profile updates, onboarding state, and account-confirmation messaging.
+- [x] Consolidate authenticated Dashboard, Settings, Sign out, and three-line navigation into one compact header control group.
+- [x] Remove the duplicate in-dashboard account pill so the signed-in identity and logout action appear only once.
+- [x] Add regression and visual checks for the streamlined responsive header.
