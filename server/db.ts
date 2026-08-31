@@ -93,6 +93,31 @@ export async function getUserByOpenId(openId: string) {
   return result[0];
 }
 
+export async function getUserByEmail(email: string) {
+  const db = await getDb();
+  if (!db) return undefined;
+  const result = await db.select().from(users).where(eq(users.email, email)).limit(1);
+  return result[0];
+}
+
+export async function createUserWithPassword(input: {
+  openId: string;
+  name: string;
+  email: string;
+  passwordHash: string;
+}) {
+  const db = await databaseOrThrow();
+  await db.insert(users).values({
+    openId: input.openId,
+    name: input.name,
+    email: input.email,
+    passwordHash: input.passwordHash,
+    loginMethod: "password",
+    lastSignedIn: new Date(),
+  });
+  return getUserByEmail(input.email);
+}
+
 export async function getUserProfile(userId: number) {
   const db = await databaseOrThrow();
   const rows = await db.select().from(userProfiles).where(eq(userProfiles.userId, userId)).limit(1);

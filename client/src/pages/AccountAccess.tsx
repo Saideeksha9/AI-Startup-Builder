@@ -1,29 +1,313 @@
-import { useAuth } from "@/_core/hooks/useAuth";
-import { AppNavigation } from "@/components/AppNavigation";
-import { Button } from "@/components/ui/button";
-import { startLogin, startRegistration } from "@/const";
-import { ArrowRight, CheckCircle2, LoaderCircle, LogIn, MailCheck, UserPlus } from "lucide-react";
-import React, { useEffect } from "react";
+// import { useState, type FormEvent } from "react";
+// import { loginWithPassword, registerWithPassword } from "@/const";
+
+// type AccountAccessProps = {
+//   mode: "sign-in" | "register";
+// };
+
+// export function AccountAccess({ mode }: AccountAccessProps) {
+//   const [email, setEmail] = useState("");
+//   const [password, setPassword] = useState("");
+//   const [name, setName] = useState("");
+//   const [error, setError] = useState<string | null>(null);
+//   const [loading, setLoading] = useState(false);
+//   const isRegister = mode === "register";
+
+//   async function handleSubmit(e: FormEvent) {
+//     e.preventDefault();
+//     setError(null);
+//     setLoading(true);
+//     const result = isRegister
+//       ? await registerWithPassword(email, password, name)
+//       : await loginWithPassword(email, password);
+
+//     if (!result.success) {
+//       setError(result.error || "Something went wrong");
+//       setLoading(false);
+//       return;
+//     }
+//     window.location.href = "/";
+//   }
+
+//   return (
+//     <div style={{ maxWidth: 400, margin: "80px auto", padding: 24 }}>
+//       <a href="/" style={{ display: "inline-block", marginBottom: 16, color: "#334155", textDecoration: "none", fontSize: 14 }}> ← Back to Home </a>
+//       <h1 style={{ fontSize: 24, marginBottom: 16 }}>
+//         {isRegister ? "Create your account" : "Sign in"}
+//       </h1>
+//       <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+//         {isRegister && (
+//           <div>
+//             <label htmlFor="name">Name</label>
+//             <input id="name" type="text" value={name} onChange={e => setName(e.target.value)} style={{ width: "100%", padding: 8 }} />
+//           </div>
+//         )}
+//         <div>
+//           <label htmlFor="email">Email</label>
+//           <input id="email" type="email" required value={email} onChange={e => setEmail(e.target.value)} style={{ width: "100%", padding: 8 }} />
+//         </div>
+//         <div>
+//           <label htmlFor="password">Password</label>
+//           <input id="password" type="password" required minLength={8} value={password} onChange={e => setPassword(e.target.value)} style={{ width: "100%", padding: 8 }} />
+//         </div>
+//         {error && <p style={{ color: "red" }}>{error}</p>}
+//         <button type="submit" disabled={loading} style={{ padding: 10, cursor: "pointer" }}>
+//           {loading ? "Please wait..." : isRegister ? "Create account" : "Sign in"}
+//         </button>
+//       </form>
+//       <p style={{ marginTop: 16 }}>
+//         {isRegister ? <>Already have an account? <a href="/sign-in">Sign in</a></> : <>Need an account? <a href="/register">Create one</a></>}
+//       </p>
+//     </div>
+//   );
+// }
+
+// export function SignInPage() {
+//   return <AccountAccess mode="sign-in" />;
+// }
+
+// export function RegisterPage() {
+//   return <AccountAccess mode="register" />;
+// }
+
+
+
+
+
+
+
+import { useState, type FormEvent } from "react";
+import { loginWithPassword, registerWithPassword } from "@/const";
 import { useLocation } from "wouter";
 
-export function AccountAccess({ mode }: { mode: "sign-in" | "register" }) {
-  const { isAuthenticated, loading } = useAuth();
+type AccountAccessProps = {
+  mode: "sign-in" | "register";
+};
+
+export function AccountAccess({ mode }: AccountAccessProps) {
   const [, setLocation] = useLocation();
-  const isRegistration = mode === "register";
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [name, setName] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+  const isRegister = mode === "register";
 
-  useEffect(() => {
-    if (!loading && isAuthenticated) setLocation("/dashboard");
-  }, [isAuthenticated, loading, setLocation]);
+  async function handleSubmit(e: FormEvent) {
+    e.preventDefault();
+    setError(null);
+    setLoading(true);
+    const result = isRegister
+      ? await registerWithPassword(email, password, name)
+      : await loginWithPassword(email, password);
 
-  const action = isRegistration ? startRegistration : startLogin;
-  const Icon = isRegistration ? UserPlus : LogIn;
-  const title = isRegistration ? "Create your founder account" : "Welcome back";
-  const description = isRegistration
-    ? "Open the secure account portal to create an account, then keep your startup blueprints, venture workspaces, notes, advisor conversations, and exports private to you."
-    : "Sign in to continue working on your private startup ideas, company workspaces, and venture plans.";
+    if (!result.success) {
+      setError(result.error || "Something went wrong");
+      setLoading(false);
+      return;
+    }
+    window.location.href = "/";
+  }
 
-  return <main className="min-h-screen bg-[#f8fafc] text-slate-950"><AppNavigation /><section className="container grid min-h-[calc(100vh-72px)] place-items-center py-12"><div className="grid w-full max-w-5xl overflow-hidden rounded-[2rem] border border-slate-200 bg-white shadow-[0_25px_70px_rgba(15,23,42,0.1)] lg:grid-cols-[0.85fr_1.15fr]"><aside className="bg-slate-950 p-8 text-white sm:p-12"><div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-blue-500 text-white"><Icon className="h-5 w-5" aria-hidden="true" /></div><p className="mt-8 text-[11px] font-bold uppercase tracking-[0.18em] text-blue-200">Autonomous AI Startup Builder</p><h1 className="mt-3 text-3xl font-black leading-tight tracking-[-0.045em]">{isRegistration ? "Build privately. Move with clarity." : "Your venture workspace is ready."}</h1><ul className="mt-8 space-y-3 text-sm leading-6 text-slate-300"><li className="flex gap-2"><CheckCircle2 className="mt-1 h-4 w-4 shrink-0 text-blue-300" aria-hidden="true" />Keep every saved startup scoped to your account.</li><li className="flex gap-2"><CheckCircle2 className="mt-1 h-4 w-4 shrink-0 text-blue-300" aria-hidden="true" />Return to milestones, risks, notes, and planning when you are ready.</li><li className="flex gap-2"><CheckCircle2 className="mt-1 h-4 w-4 shrink-0 text-blue-300" aria-hidden="true" />Open your dashboard from any primary app page.</li></ul></aside><div className="p-8 sm:p-12"><p className="text-[11px] font-bold uppercase tracking-[0.18em] text-blue-700">{isRegistration ? "New here?" : "Already registered?"}</p><h2 className="mt-3 text-3xl font-black tracking-[-0.045em] text-slate-950">{title}</h2><p className="mt-4 max-w-xl text-base leading-7 text-slate-600">{description}</p><div className="mt-6 flex gap-3 rounded-2xl border border-blue-100 bg-blue-50 p-4 text-sm leading-6 text-blue-950"><MailCheck className="mt-0.5 h-5 w-5 shrink-0 text-blue-700" aria-hidden="true" /><div><p className="font-bold">Passwordless email confirmation</p><p className="mt-0.5 text-blue-900/80">In the secure account portal, use your email confirmation link when prompted. There is no password to create, remember, or store in this app.</p></div></div><Button type="button" onClick={action} className="mt-6 rounded-full bg-slate-950 px-5 font-bold text-white hover:bg-slate-800">{isRegistration ? "Open secure account portal" : "Continue to secure sign in"}<ArrowRight className="h-4 w-4" aria-hidden="true" /></Button>{loading ? <div className="mt-4 flex items-center gap-2 text-sm text-slate-500"><LoaderCircle className="h-4 w-4 animate-spin" aria-hidden="true" />Checking your account…</div> : null}<p className="mt-5 text-sm text-slate-500">{isRegistration ? "Already have an account?" : "New to the builder?"} <button type="button" onClick={() => setLocation(isRegistration ? "/sign-in" : "/register")} className="font-bold text-blue-700 hover:underline">{isRegistration ? "Sign in" : "Create an account"}</button></p></div></div></section></main>;
+  return (
+    <main
+      style={{
+        minHeight: "100vh",
+        background: "linear-gradient(135deg, #eff6ff 0%, #f8fafc 50%, #fdf2f8 100%)",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        padding: "24px",
+        fontFamily: "inherit",
+      }}
+    >
+      <div style={{ width: "100%", maxWidth: 420 }}>
+        <button
+          type="button"
+          onClick={() => setLocation("/")}
+          style={{
+            display: "inline-flex",
+            alignItems: "center",
+            gap: 6,
+            marginBottom: 24,
+            background: "none",
+            border: "none",
+            color: "#475569",
+            fontSize: 14,
+            fontWeight: 700,
+            cursor: "pointer",
+            padding: 0,
+          }}
+        >
+          ← Back to Home
+        </button>
+
+        <div
+          style={{
+            background: "#ffffff",
+            borderRadius: 32,
+            border: "1px solid #e2e8f0",
+            boxShadow: "0 25px 70px rgba(15, 23, 42, 0.1)",
+            padding: "40px 32px",
+          }}
+        >
+          <div
+            style={{
+              width: 44,
+              height: 44,
+              borderRadius: 16,
+              background: "#2563eb",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              marginBottom: 20,
+            }}
+          >
+            <span style={{ color: "white", fontSize: 20 }}>✨</span>
+          </div>
+
+          <p
+            style={{
+              fontSize: 11,
+              fontWeight: 800,
+              letterSpacing: "0.14em",
+              textTransform: "uppercase",
+              color: "#2563eb",
+              margin: "0 0 8px 0",
+            }}
+          >
+            {isRegister ? "New here?" : "Welcome back"}
+          </p>
+          <h1
+            style={{
+              fontSize: 28,
+              fontWeight: 900,
+              letterSpacing: "-0.03em",
+              color: "#0f172a",
+              margin: "0 0 8px 0",
+            }}
+          >
+            {isRegister ? "Create your account" : "Sign in"}
+          </h1>
+          <p style={{ fontSize: 14, color: "#64748b", margin: "0 0 28px 0", lineHeight: 1.5 }}>
+            {isRegister
+              ? "Keep your startup blueprints, workspaces, and advisor conversations private to you."
+              : "Continue working on your private startup ideas and venture plans."}
+          </p>
+
+          <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+            {isRegister && (
+              <div>
+                <label htmlFor="name" style={labelStyle}>Name</label>
+                <input
+                  id="name"
+                  type="text"
+                  value={name}
+                  onChange={e => setName(e.target.value)}
+                  placeholder="Your name"
+                  style={inputStyle}
+                />
+              </div>
+            )}
+            <div>
+              <label htmlFor="email" style={labelStyle}>Email</label>
+              <input
+                id="email"
+                type="email"
+                required
+                value={email}
+                onChange={e => setEmail(e.target.value)}
+                placeholder="you@example.com"
+                style={inputStyle}
+              />
+            </div>
+            <div>
+              <label htmlFor="password" style={labelStyle}>Password</label>
+              <input
+                id="password"
+                type="password"
+                required
+                minLength={8}
+                value={password}
+                onChange={e => setPassword(e.target.value)}
+                placeholder="At least 8 characters"
+                style={inputStyle}
+              />
+            </div>
+
+            {error && (
+              <div
+                style={{
+                  background: "#fef2f2",
+                  border: "1px solid #fecaca",
+                  color: "#b91c1c",
+                  borderRadius: 12,
+                  padding: "10px 14px",
+                  fontSize: 13,
+                  fontWeight: 600,
+                }}
+              >
+                {error}
+              </div>
+            )}
+
+            <button
+              type="submit"
+              disabled={loading}
+              style={{
+                marginTop: 4,
+                background: loading ? "#334155" : "#0f172a",
+                color: "white",
+                border: "none",
+                borderRadius: 999,
+                padding: "14px 20px",
+                fontSize: 14,
+                fontWeight: 800,
+                cursor: loading ? "default" : "pointer",
+                transition: "background 0.15s ease",
+              }}
+            >
+              {loading ? "Please wait…" : isRegister ? "Create account" : "Sign in"}
+            </button>
+          </form>
+
+          <p style={{ marginTop: 24, fontSize: 13, color: "#64748b", textAlign: "center" }}>
+            {isRegister ? (
+              <>Already have an account? <a href="/sign-in" style={linkStyle}>Sign in</a></>
+            ) : (
+              <>Need an account? <a href="/register" style={linkStyle}>Create one</a></>
+            )}
+          </p>
+        </div>
+      </div>
+    </main>
+  );
 }
+
+const labelStyle: React.CSSProperties = {
+  display: "block",
+  fontSize: 12,
+  fontWeight: 700,
+  color: "#334155",
+  marginBottom: 6,
+};
+
+const inputStyle: React.CSSProperties = {
+  width: "100%",
+  padding: "11px 14px",
+  borderRadius: 12,
+  border: "1px solid #e2e8f0",
+  fontSize: 14,
+  color: "#0f172a",
+  outline: "none",
+  boxSizing: "border-box",
+};
+
+const linkStyle: React.CSSProperties = {
+  color: "#2563eb",
+  fontWeight: 700,
+  textDecoration: "none",
+};
 
 export function SignInPage() {
   return <AccountAccess mode="sign-in" />;

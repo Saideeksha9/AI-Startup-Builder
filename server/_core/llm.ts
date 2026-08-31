@@ -214,7 +214,7 @@ const normalizeToolChoice = (
 
 const resolveApiUrl = () =>
   ENV.forgeApiUrl && ENV.forgeApiUrl.trim().length > 0
-    ? `${ENV.forgeApiUrl.replace(/\/$/, "")}/v1/chat/completions`
+    ? `${ENV.forgeApiUrl.replace(/\/$/, "")}/chat/completions`
     : "https://forge.manus.im/v1/chat/completions";
 
 const assertApiKey = () => {
@@ -364,6 +364,8 @@ export async function invokeLLM(params: InvokeParams): Promise<InvokeResult> {
 
   if (model) {
     payload.model = model;
+  } else {
+    payload.model = "gemini-3.6-flash";
   }
 
   if (tools && tools.length > 0) {

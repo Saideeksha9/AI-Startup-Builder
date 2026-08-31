@@ -249,7 +249,8 @@ export const chatRouter = router({
       });
 
       const modelResult = await invokeLLM({
-        model: "gpt-5-mini",
+        model: "gemini-3.6-flash",
+        response_format: { type: "json_schema", json_schema: { name: "venture_advisor_response", schema: z.toJSONSchema(rawAdvisorResponseSchema), }, },
         messages: [
           {
             role: "system",

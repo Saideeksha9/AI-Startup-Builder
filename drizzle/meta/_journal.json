@@ -50,6 +50,13 @@
       "when": 1786793530218,
       "tag": "0006_yellow_mastermind",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "5",
+      "when": 1787992566312,
+      "tag": "0007_equal_nehzno",
+      "breakpoints": true
     }
   ]
 }
